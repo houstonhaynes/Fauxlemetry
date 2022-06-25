@@ -6,7 +6,7 @@ let main argv =
 
     let app = CommandApp()
     app.Configure(fun config ->
-        config.AddCommand<TimeSeries.SpawnData>("spawndata")
+        config.AddCommand<TimeSeries.Generate>("spawndata")
             .WithAlias("s")
             .WithDescription("Creates 30 days of test Data for Redis time series.")
             |> ignore)
