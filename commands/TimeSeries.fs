@@ -1,6 +1,6 @@
 namespace Commands
 
-module Redis =
+module TimeSeries =
     open Spectre.Console.Cli
     open Output
 

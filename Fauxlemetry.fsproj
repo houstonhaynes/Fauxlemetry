@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <Compile Include="spectre/Output.fs" />
-    <Compile Include="commands/Hello.fs" />
+    <Compile Include="commands/TimeSeries.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
