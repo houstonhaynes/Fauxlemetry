@@ -4,7 +4,7 @@ This console app will generate delimited data with some correlation between valu
 
 ## Faster Than Realtime Data Generation
 
-The objective is to generate a volume of data that has certain "event rates" for combinations of values. Because there's an business scenario that dictates these events occur with a certain incident rate and span-of-time, there needs to be a specific time stamp associated with them that makes a form of business sense. 
+The objective is to generate a volume of data that has certain "event rates" for combinations of values. Because there's a business scenario that dictates these events occur with a certain incident rate and span-of-time, there needs to be a specific time stamp associated with them that makes a form of business sense. 
 
 ## What does this mean?
 
