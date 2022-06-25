@@ -7,13 +7,13 @@ module Redis =
     type SpawnDataSettings() =
         inherit CommandSettings()
 
-        [<CommandOption("-n|--name")>]
-        member val name = "friend" with get, set
+        [<CommandOption("-d|--days")>]
+        member val days = 30 with get, set
     
     type SpawnData() =
         inherit Command<SpawnDataSettings>()
         interface ICommandLimiter<SpawnDataSettings>
 
-        override _.Execute(_context, settings) = 
-            printMarkedUp $"Hello {emphasize settings.name}! This command spawns data from F#."
+         override _.Execute(_context, settings) =
+            printMarkedUp $"You've set data to run for {emphasize settings.days} days!"
             0
