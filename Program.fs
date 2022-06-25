@@ -5,11 +5,11 @@ open Commands
 let main argv =
 
     let app = CommandApp()
+
     app.Configure(fun config ->
-        config.AddCommand<Greet.Hello>("greet")
-            .WithAlias("g")
-            .WithDescription("Greets the user running the application.")
+        config.AddCommand<Redis.SpawnData>("spawndata")
+            .WithAlias("s")
+            .WithDescription("Creates 30 days of test Data for Redis time series.")
             |> ignore)
-        config.AddCommand<Greet.SpawnData>("spawndata")
 
     app.Run(argv)

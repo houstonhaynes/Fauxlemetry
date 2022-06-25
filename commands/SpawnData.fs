@@ -1,6 +1,6 @@
 namespace Commands
 
-module SpawnData =
+module Redis =
     open Spectre.Console.Cli
     open Output
 
