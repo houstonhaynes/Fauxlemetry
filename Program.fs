@@ -10,5 +10,6 @@ let main argv =
             .WithAlias("g")
             .WithDescription("Greets the user running the application.")
             |> ignore)
+        config.AddCommand<Greet.SpawnData>("spawndata")
 
     app.Run(argv)
