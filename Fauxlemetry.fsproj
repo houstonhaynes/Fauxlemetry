@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace>fsharp_spectre_console_template</RootNamespace>
+    <RootNamespace>fauxlemetry</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
