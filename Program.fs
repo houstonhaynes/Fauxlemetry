@@ -13,6 +13,10 @@ let main argv =
         config.AddCommand<TimeSeries.Emit>("emit")
             .WithAlias("e")
             .WithDescription("Creates a value with an emit interval constant")
+            |> ignore
+        config.AddCommand<TimeSeries.CreateBackdatedSeries>("backdate")
+            .WithAlias("b")
+            .WithDescription("Creates backdated series of entries")
             |> ignore)
 
     app.Run(argv)
