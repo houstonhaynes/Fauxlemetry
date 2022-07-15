@@ -20,8 +20,8 @@ let main argv =
         |> ignore
 
         config
-            .AddCommand<TimeSeries.CreateBackdatedSeries>("backdate")
-            .WithAlias("b")
+            .AddCommand<TimeSeries.CreateBackdatedSeries>("generate")
+            .WithAlias("g")
             .WithDescription("Creates backdated series of entries")
         |> ignore)
 

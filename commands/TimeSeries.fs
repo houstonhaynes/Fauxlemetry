@@ -1,16 +1,15 @@
 namespace Commands
 
-open System
-open System.IO
-open System.Text.Json
-open MathNet.Numerics
-open FSharp.Data
-open FSharp.Json
-open Microsoft.FSharp.Collections
+open System.Web
+
 
 module TimeSeries =
     open System
+    open System.IO
+    open System.Text.Json
+    open System.Text.Json.Serialization
     open System.Threading
+    open Microsoft.FSharp.Collections
     open Spectre.Console.Cli
     open Output
 
@@ -31,10 +30,10 @@ module TimeSeries =
         inherit CommandSettings()
 
         [<CommandOption("-v|--volume")>]
-        member val volume = 100 with get, set
+        member val volume = 10000 with get, set
 
         [<CommandOption("-r|--rewind")>]
-        member val rewind: int = 1 with get, set
+        member val rewind: int = 30 with get, set
 
     type Emit() =
         inherit Command<EmitSettings>()
@@ -58,7 +57,6 @@ module TimeSeries =
             printMarkedUp $"You've set data to run for {emphasize settings.days} days!"
             0
 
-    // TODO: use this record to manage generation of the JSON object
     type EventRecord =
         { EventTime: string
           src_ip: string
@@ -78,7 +76,7 @@ module TimeSeries =
         override _.Execute(_context, settings) =
             // set up random functions
             let rnd = Random()
-            // let shuffleR (r : Random) xs = xs |> Seq.sortBy (fun _ -> r.Next())
+            let shuffleR (r : Random) xs = xs |> Seq.sortBy (fun _ -> r.Next())
             // TODO: create a for loop to cycle through all days up to the present
             let dateInPast =
                 DateTime.Now.AddDays(-(settings.rewind))
@@ -88,19 +86,19 @@ module TimeSeries =
             // build a list of randomized time values for hour, minute, second and millis (0 padded)
             let randomHours =
                 [ for i in 0 .. settings.volume do
-                      rnd.Next(23).ToString().PadLeft(2, '0') ]
+                      rnd.Next(24).ToString().PadLeft(2, '0') ]
 
             let randomMinutes =
                 [ for i in 0 .. settings.volume do
-                      rnd.Next(59).ToString().PadLeft(2, '0') ]
+                      rnd.Next(60).ToString().PadLeft(2, '0') ]
 
             let randomSeconds =
                 [ for i in 0 .. settings.volume do
-                      rnd.Next(59).ToString().PadLeft(2, '0') ]
+                      rnd.Next(60).ToString().PadLeft(2, '0') ]
 
             let randomMillis =
                 [ for i in 0 .. settings.volume do
-                      rnd.Next(999).ToString().PadLeft(3, '0') ]
+                      rnd.Next(1000).ToString().PadLeft(3, '0') ]
             // build a list of fake timestamps from the above lists and sort chronologically
             let randomTimeStamps =
                 [ for i in 0 .. settings.volume do
@@ -152,23 +150,18 @@ module TimeSeries =
                       + "."
                       + randomDestOctets4[i] ]
 
-            // build a list of randomized ports for source and destination IPs
-            let randomSrcPort =
-                MathNet.Numerics.Combinatorics.GeneratePermutation(100)
-
             let randomSrcPort =
                 [ for i in 0 .. settings.volume do
-                      if randomSrcPort[i] > 90 then
+                      let randomSrcPort = [1..100] |> shuffleR (Random()) |> Seq.head
+                      if randomSrcPort > 90 then
                           rnd.Next(1025, 65535).ToString()
                       else
                           "80" ]
 
             let randomDestPort =
-                MathNet.Numerics.Combinatorics.GeneratePermutation(100)
-
-            let randomDestPort =
                 [ for i in 0 .. settings.volume do
-                      if randomDestPort[i] > 90 then
+                      let randomDestPort = [1..100] |> shuffleR (Random()) |> Seq.head
+                      if randomDestPort > 90 then
                           rnd.Next(1025, 65535).ToString()
                       else
                           "80" ]
@@ -270,36 +263,33 @@ module TimeSeries =
                   "nord;proton"
                   "nord;surfshark"
                   "nord;foxyproxy" ]
-            // create list of unique values between 1 and 100
-            let randomVPN =
-                MathNet.Numerics.Combinatorics.GeneratePermutation(100)
+
             // select top 20%ish of values
             let VpnClientList =
                 [ for i in 0 .. settings.volume do
-                      if randomVPN[i] > 80 then
+                      let randomVPN = [1..100] |> shuffleR (Random()) |> Seq.head
+                      if randomVPN > 80 then
                           VPNList.[rnd.Next(VPNList.Length)]
                       else
                           "" ]
-            // create list of unique values between 1 and 100
-            let randomProxy =
-                MathNet.Numerics.Combinatorics.GeneratePermutation(100)
+
             // select top 20%ish of values - use VpnClientList value if present, otherwise get a new value
             let ProxyClientList =
                 [ for i in 0 .. settings.volume do
-                      if randomProxy[i] > 80 then
+                      let randomProxy = [1..100] |> shuffleR (Random()) |> Seq.head
+                      if randomProxy > 80 then
                           if VpnClientList[i] <> "" then
                               VpnClientList[i]
                           else
                               VPNList.[rnd.Next(VPNList.Length)]
                       else
                           "" ]
-            // create list of unique values between 1 and 100
-            let randomTor =
-                MathNet.Numerics.Combinatorics.GeneratePermutation(100)
+            
             // select top 20%ish of values - use VpnClientList or ProxyClientList value, otherwise get new
             let TorClientList =
                 [ for i in 0 .. settings.volume do
-                      if randomTor[i] > 80 then
+                      let randomTor = [1..100] |> shuffleR (Random()) |> Seq.head
+                      if randomTor > 80 then
                           if (VpnClientList[i] <> "" || ProxyClientList[i] <> "") then
                               if VpnClientList[i] <> "" then
                                   VpnClientList[i]
@@ -312,48 +302,45 @@ module TimeSeries =
 
 
             // set up a list for MAL booleans
-            let randomMAL =
-                MathNet.Numerics.Combinatorics.GeneratePermutation(100)
-
             let MalBoolean =
                 [ for i in 0 .. settings.volume do
-                      if randomMAL[i] > 80 then
+                      let randomMAL = [1..100] |> shuffleR (Random()) |> Seq.head
+                      if randomMAL > 80 then
                           "TRUE"
                       else
                           "FALSE" ]
-
-            let DayRecordList =
+                
+            // create full JSON serializable list
+            let DayRecordList : EventRecord List =
                 [ for i in 0 .. settings.volume do
-                      "{ EventTime: "
-                      + randomTimeStamps[i]
-                      + ", src_ip: "
-                      + randomSrcIPv4[i]
-                      + ", src_port: "
-                      + randomSrcPort[i]
-                      + ", dst_ip: "
-                      + randomDestIPv4[i]
-                      + ", dst_port: "
-                      + randomDestPort[i]
-                      + ", cc: "
-                      + randomCC[i]
-                      + ", vpn: "
-                      + VpnClientList[i]
-                      + ", proxy: "
-                      + ProxyClientList[i]
-                      + ", tor: "
-                      + TorClientList[i]
-                      + ", malware: "
-                      + MalBoolean[i]
-                      + " }" ]
+                     { EventTime = randomTimeStamps[i];
+                      src_ip = randomSrcIPv4[i];
+                      src_port = randomSrcPort[i];
+                      dst_ip = randomDestIPv4[i];
+                      dst_port = randomDestPort[i];
+                      cc = randomCC[i];
+                      vpn = VpnClientList[i];
+                      proxy = ProxyClientList[i];
+                      tor = TorClientList[i];
+                      malware = MalBoolean[i]
+                      }]
 
+            // serialize JSON
+            let options = JsonSerializerOptions()
+            options.Converters.Add(JsonFSharpConverter())
+            
             let DayRecordJSON =
-                JsonSerializer.Serialize DayRecordList
+                JsonSerializer.Serialize (DayRecordList, options)
 
-            //let fileDateTime =
-           //     DateTime.Now.ToString("yyyy-MM-ddd=hh-mm-ss_")
-
-            File.WriteAllText("EventData.json", DayRecordJSON)
-            printf "%A" DayRecordJSON
-            printfn ""
+            // create file pre-pend
+            let backDate =
+                dateInPast.ToString("yyyy_MM_dd")
+            let fileDateTime =
+                DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss")
+            // write the file
+            File.WriteAllText(backDate+"_EventData_"+fileDateTime+".json", DayRecordJSON)
+            
+            //printfn "%A" DayRecordJSON
+            
             printMarkedUp $"You've set rewind for {emphasize RewindDate} and to generate {info settings.volume} events!"
             0
