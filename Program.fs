@@ -5,18 +5,24 @@ open Commands
 let main argv =
 
     let app = CommandApp()
-    app.Configure(fun config ->
-        config.AddCommand<TimeSeries.Generate>("days")
+
+    app.Configure (fun config ->
+        config
+            .AddCommand<TimeSeries.Generate>("days")
             .WithAlias("d")
             .WithDescription("Creates 30 days of test Data for Redis time series.")
-            |> ignore
-        config.AddCommand<TimeSeries.Emit>("emit")
+        |> ignore
+
+        config
+            .AddCommand<TimeSeries.Emit>("emit")
             .WithAlias("e")
             .WithDescription("Creates a value with an emit interval constant")
-            |> ignore
-        config.AddCommand<TimeSeries.CreateBackdatedSeries>("backdate")
+        |> ignore
+
+        config
+            .AddCommand<TimeSeries.CreateBackdatedSeries>("backdate")
             .WithAlias("b")
             .WithDescription("Creates backdated series of entries")
-            |> ignore)
+        |> ignore)
 
     app.Run(argv)

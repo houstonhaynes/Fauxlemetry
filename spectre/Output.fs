@@ -1,13 +1,15 @@
 module Output
-    open Spectre.Console
 
-    let primaryStyle = "green"
-    let warningStyle = "red"
-    let infoStyle = "yellow"
+open Spectre.Console
 
-    let markup style content = $"[{style}]{content}[/]"
-    let emphasize content = markup primaryStyle content
-    let warn content = markup warningStyle content
-    let info content = markup infoStyle content
+let primaryStyle = "green"
+let warningStyle = "red"
+let infoStyle = "yellow"
 
-    let printMarkedUp content = AnsiConsole.Markup $"{content}{System.Environment.NewLine}"
+let markup style content = $"[{style}]{content}[/]"
+let emphasize content = markup primaryStyle content
+let warn content = markup warningStyle content
+let info content = markup infoStyle content
+
+let printMarkedUp content =
+    AnsiConsole.Markup $"{content}{System.Environment.NewLine}"

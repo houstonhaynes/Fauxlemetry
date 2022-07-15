@@ -1,23 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace>fauxlemetry</RootNamespace>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <RootNamespace>fauxlemetry</RootNamespace>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="spectre/Output.fs" />
-    <Compile Include="commands/TimeSeries.fs" />
-    <Compile Include="Program.fs" />
-  </ItemGroup>
+    <ItemGroup>
+        <Compile Include="spectre/Output.fs"/>
+        <Compile Include="commands/TimeSeries.fs"/>
+        <Compile Include="Program.fs"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FSharp.Data" Version="4.2.9" />
-    <PackageReference Include="FSharp.Stats" Version="0.4.7" />
-    <PackageReference Include="FsRandom" Version="1.4.0.1" />
-    <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
-    <PackageReference Include="Spectre.Console" Version="0.44.0" />
-    <PackageReference Update="FSharp.Core" Version="6.0.5" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="FSharp.Data" Version="4.2.9"/>
+        <PackageReference Include="FSharp.Json" Version="0.4.1"/>
+        <PackageReference Include="FSharp.Stats" Version="0.4.7"/>
+        <PackageReference Include="FsRandom" Version="1.4.0.1"/>
+        <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0"/>
+        <PackageReference Include="Spectre.Console" Version="0.44.0"/>
+        <PackageReference Update="FSharp.Core" Version="6.0.5"/>
+    </ItemGroup>
 </Project>
