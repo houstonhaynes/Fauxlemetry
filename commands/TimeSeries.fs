@@ -1,5 +1,6 @@
 namespace Commands
 
+open System
 open System.Web
 
 
@@ -34,6 +35,9 @@ module TimeSeries =
 
         [<CommandOption("-r|--rewind")>]
         member val rewind: int = 30 with get, set
+        
+        [<CommandOption("-c|--customers")>]
+        member val cst_id = Guid.NewGuid() with get, set
 
     type Emit() =
         inherit Command<EmitSettings>()
@@ -59,15 +63,16 @@ module TimeSeries =
 
     type EventRecord =
         { EventTime: string
+          cst_id: Guid
           src_ip: string
-          src_port: string
+          src_port: int
           dst_ip: string
-          dst_port: string
+          dst_port: int
           cc: string
           vpn: string
           proxy: string
           tor: string
-          malware: string }
+          malware: Boolean }
 
     type CreateBackdatedSeries() =
         inherit Command<BackdateSettings>()
@@ -86,6 +91,10 @@ module TimeSeries =
             // set up random functions
             let rnd = Random()
             let shuffleR (r : Random) xs = xs |> Seq.sortBy (fun _ -> r.Next())
+            
+            // show current time
+            let currentFileTime = DateTime.Now.ToString("hh:mm:ss.fff")
+            printMarkedUp $"Current time is {emphasize currentFileTime} !"
             
             while rewind >= 0 do
                 let dateInPast =
@@ -130,7 +139,6 @@ module TimeSeries =
                 let randomSrcOctets3 =
                     [ for i in 0 .. settings.volume do
                           rnd.Next(256).ToString().PadLeft(3, '0') ]
-
                 let randomSrcOctets4 =
                     [ for i in 0 .. settings.volume do
                           rnd.Next(256).ToString().PadLeft(3, '0') ]
@@ -142,6 +150,7 @@ module TimeSeries =
                 let randomDestOctets4 =
                     [ for i in 0 .. settings.volume do
                           rnd.Next(256).ToString().PadLeft(3, '0') ]
+                    
                 // build a list of fake IPv4s from constants and lists above
                 let randomSrcIPv4 =
                     [ for i in 0 .. settings.volume do
@@ -162,167 +171,113 @@ module TimeSeries =
                 let randomSrcPort =
                     [ for i in 0 .. settings.volume do
                           let randomSrcPort = [1..100] |> shuffleR (Random()) |> Seq.head
-                          if randomSrcPort > 90 then
-                              rnd.Next(1025, 65535).ToString()
-                          else
-                              "80" ]
+                          match randomSrcPort with
+                          | i when i > 90 -> rnd.Next(1025, 65535)
+                          | _ -> 80]
 
                 let randomDestPort =
                     [ for i in 0 .. settings.volume do
                           let randomDestPort = [1..100] |> shuffleR (Random()) |> Seq.head
-                          if randomDestPort > 90 then
-                              rnd.Next(1025, 65535).ToString()
-                          else
-                              "80" ]
+                          match randomDestPort with
+                          | i when i > 90 -> rnd.Next(1025, 65535)
+                          | _ -> 80]
 
-                // TODO: Create a case for choosing countries by numerical range
-                // let randomCC = MathNet.Numerics.Combinatorics.GeneratePermutation(100)
-                // create list of countries to select for sample data :: for now repeats increase chance of selection
-                let CountryList =
-                    [ "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "RU"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "CN"
-                      "UK"
-                      "UK"
-                      "UK"
-                      "UK"
-                      "US"
-                      "US"
-                      "US"
-                      "US"
-                      "US"
-                      "US"
-                      "IT"
-                      "CA"
-                      "MX" ]
 
                 // generate list of countries
                 let randomCC =
                     [ for i in 0 .. settings.volume do
-                          CountryList.[rnd.Next(CountryList.Length)] ]
+                          let randomCountry = [1..100] |> shuffleR (Random()) |> Seq.head
+                          match randomCountry with
+                          | i when i < 5 -> "RU"
+                          | i when i > 5 && i <= 10-> "ID"
+                          | i when i > 10 && i <= 15  -> "EG"
+                          | i when i > 15 && i <= 20 -> "SG"
+                          | i when i > 20 && i <= 25 -> "UA"
+                          | i when i > 25 && i <= 30 -> "BR"
+                          | i when i > 30 && i <= 35 -> "DE"
+                          | i when i > 35 && i <= 45 -> "IN"
+                          | i when i > 45 && i <= 60 -> "CN"
+                          | _ -> "US"
+                    ]
 
-                // create list of VPNs clients to select for sample data :: repeats increase chance of selection
-                let VPNList =
-                    [ "nord"
-                      "nord"
-                      "nord"
-                      "nord"
-                      "nord"
-                      "nord"
-                      "nord"
-                      "nord"
-                      "nord"
-                      "nord"
-                      "surfshark"
-                      "surfshark"
-                      "surfshark"
-                      "surfshark"
-                      "surfshark"
-                      "surfshark"
-                      "foxyproxy"
-                      "foxyproxy"
-                      "foxyproxy"
-                      "foxyproxy"
-                      "foxyproxy"
-                      "foxyproxy"
-                      "proton"
-                      "proton"
-                      "proton"
-                      "proton"
-                      "proton"
-                      "proton"
-                      "proton"
-                      "proton"
-                      "purevpn"
-                      "purevpn"
-                      "purevpn"
-                      "nord;proton"
-                      "nord;surfshark"
-                      "nord;foxyproxy" ]
-
-                // select top 20%ish of values
+                // select 30% of values to populate in rows
                 let VpnClientList =
                     [ for i in 0 .. settings.volume do
                           let randomVPN = [1..100] |> shuffleR (Random()) |> Seq.head
-                          if randomVPN > 80 then
-                              VPNList.[rnd.Next(VPNList.Length)]
-                          else
-                              "" ]
+                          match randomVPN with
+                          | i when i > 1 && i <= 3 -> "nord;proton"
+                          | i when i > 3 && i <= 5 -> "nord;surfshark"
+                          | i when i > 5 && i <= 7 -> "nord;foxyproxy"
+                          | i when i > 7 && i <= 11 -> "purevpn"
+                          | i when i > 11 && i <= 15 -> "proton"
+                          | i when i > 15 && i <= 20 -> "nord"
+                          | i when i > 20 && i <= 25 -> "foxyproxy"
+                          | i when i > 25 && i <= 30 -> "surfshark"
+                          | _ -> ""
+                    ]
+                          
 
                 // select top 20%ish of values - use VpnClientList value if present, otherwise get a new value
                 let ProxyClientList =
                     [ for i in 0 .. settings.volume do
-                          let randomProxy = [1..100] |> shuffleR (Random()) |> Seq.head
-                          if randomProxy > 80 then
-                              if VpnClientList[i] <> "" then
-                                  VpnClientList[i]
-                              else
-                                  VPNList.[rnd.Next(VPNList.Length)]
+                      let randomProxy = [1..100] |> shuffleR (Random()) |> Seq.head
+                      if randomProxy <= 30 then
+                          if VpnClientList[i] <> "" then
+                              VpnClientList[i]
                           else
-                              "" ]
+                              match randomProxy with
+                              | i when i > 1 && i <= 3 -> "nord;proton"
+                              | i when i > 3 && i <= 5 -> "nord;surfshark"
+                              | i when i > 5 && i <= 7 -> "nord;foxyproxy"
+                              | i when i > 7 && i <= 11 -> "purevpn"
+                              | i when i > 11 && i <= 15 -> "proton"
+                              | i when i > 15 && i <= 20 -> "nord"
+                              | i when i > 20 && i <= 25 -> "foxyproxy"
+                              | i when i > 25 && i <= 30 -> "surfshark"
+                              | _ -> ""
+                      else
+                          ""
+                    ]
                 
                 // select top 20%ish of values - use VpnClientList or ProxyClientList value, otherwise get new
                 let TorClientList =
                     [ for i in 0 .. settings.volume do
                           let randomTor = [1..100] |> shuffleR (Random()) |> Seq.head
-                          if randomTor > 80 then
+                          if randomTor <=30 then
                               if (VpnClientList[i] <> "" || ProxyClientList[i] <> "") then
                                   if VpnClientList[i] <> "" then
                                       VpnClientList[i]
                                   else
                                       ProxyClientList[i]
                               else
-                                  VPNList.[rnd.Next(VPNList.Length)]
+                                  match randomTor with
+                                  | i when i > 1 && i <= 3 -> "nord;proton"
+                                  | i when i > 3 && i <= 5 -> "nord;surfshark"
+                                  | i when i > 5 && i <= 7 -> "nord;foxyproxy"
+                                  | i when i > 7 && i <= 11 -> "purevpn"
+                                  | i when i > 11 && i <= 15 -> "proton"
+                                  | i when i > 15 && i <= 20 -> "nord"
+                                  | i when i > 20 && i <= 25 -> "foxyproxy"
+                                  | i when i > 25 && i <= 30 -> "surfshark"
+                                  | _ -> ""
                           else
-                              "" ]
+                              ""
+                    ]
 
 
                 // set up a list for MAL booleans
                 let MalBoolean =
                     [ for i in 0 .. settings.volume do
                           let randomMAL = [1..100] |> shuffleR (Random()) |> Seq.head
-                          if randomMAL > 80 then
-                              "TRUE"
-                          else
-                              "FALSE" ]
-                    
+                          match randomMAL with
+                          | i when i > 80 -> true
+                          | _ -> false]
+                
                 // create full JSON serializable list
                 let DayRecordList : EventRecord List =
                     [ for i in 0 .. settings.volume do
-                         { EventTime = randomTimeStamps[i];
+                        { EventTime = randomTimeStamps[i]
+                          cst_id = settings.cst_id;
                           src_ip = randomSrcIPv4[i];
                           src_port = randomSrcPort[i];
                           dst_ip = randomDestIPv4[i];
@@ -341,12 +296,12 @@ module TimeSeries =
                 let DayRecordJSON =
                     JsonSerializer.Serialize (DayRecordList, options)
 
-
                 // write the file
-                File.AppendAllText(fileName, DayRecordJSON)
+                File.AppendAllTextAsync(fileName, DayRecordJSON)
                 
                 //printfn "%A" DayRecordJSON
-                rewind <- rewind - 1                
-                printMarkedUp $"You have generated {info settings.volume} events for {emphasize RewindDate} !"
+                rewind <- rewind - 1
+                let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
+                printMarkedUp $"{info settings.volume} events generated for {emphasize RewindDate} at {emphasize currentCycleTime} !"
 
             0
