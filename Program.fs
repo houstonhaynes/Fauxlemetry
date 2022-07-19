@@ -7,22 +7,17 @@ let main argv =
     let app = CommandApp()
 
     app.Configure (fun config ->
-        config
-            .AddCommand<TimeSeries.Generate>("days")
-            .WithAlias("d")
-            .WithDescription("Creates 30 days of test Data for Redis time series.")
-        |> ignore
 
         config
             .AddCommand<TimeSeries.Emit>("emit")
             .WithAlias("e")
-            .WithDescription("Creates a value with an emit interval constant")
+            .WithDescription("Creates semi-random volumes of events and sends by interval")
         |> ignore
 
         config
             .AddCommand<TimeSeries.CreateBackdatedSeries>("generate")
             .WithAlias("g")
-            .WithDescription("Creates backdated series of entries")
+            .WithDescription("Creates backdated volume of entries by company (GUID)")
         |> ignore)
 
     app.Run(argv)

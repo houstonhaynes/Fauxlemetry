@@ -10,6 +10,7 @@
         <Compile Include="spectre/Output.fs" />
         <Compile Include="commands/TimeSeries.fs" />
         <Compile Include="Program.fs" />
+        <Folder Include="datagen" />
     </ItemGroup>
 
     <ItemGroup>
