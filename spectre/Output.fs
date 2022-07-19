@@ -13,4 +13,3 @@ let info content = markup infoStyle content
 
 let printMarkedUp content =
     AnsiConsole.Markup $"{content}{System.Environment.NewLine}"
-    

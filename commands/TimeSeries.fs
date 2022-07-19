@@ -3,6 +3,7 @@ namespace Commands
 open System
 open System.Web
 open Microsoft.FSharp.Control
+open Spectre.Console
 
 
 module TimeSeries =
@@ -32,7 +33,7 @@ module TimeSeries =
         member val rewind: int = 3 with get, set
         
         [<CommandOption("-c|--customers")>]
-        member val cst_id = "" with get, set
+        member val cst_id = Guid.NewGuid().ToString() with get, set
         
     type Emit() =
         inherit Command<EmitSettings>()
@@ -95,6 +96,9 @@ module TimeSeries =
                     let RewindDate =
                         dateInPast.ToString("MM/dd/yyyy")
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
+                    
+                    // TODO: set Progress indicator for 0-1%
+                        
                     printMarkedUp $"{info settings.volume} events started for {warn customer} on {emphasize RewindDate} at {emphasize currentCycleTime} !"
                         
                     // build a list of randomized time values for hour, minute, second and millis (0 padded)
@@ -128,7 +132,7 @@ module TimeSeries =
                               + randomMillis[i] ]
                         |> List.sort
                         
-                    // TODO: set indicator for 10%    
+                    // TODO: set Progress indicator for 10%    
     
                     
                     let srcIpFirstOctets = "160.72"
@@ -184,7 +188,7 @@ module TimeSeries =
                               | _ -> "80"]
     
                         
-                    // TODO: set indicator for 20%   
+                    // TODO: set Progress indicator for 20%   
     
                     // generate list of countries - bias is built from Cloudflare DDoS source country top 10
                     let randomCC =
@@ -203,7 +207,7 @@ module TimeSeries =
                               | _ -> "US"
                         ]
                         
-                    // TODO: set indicator for 25% 
+                    // TODO: set Progress indicator for 25% 
                         
                     // Generate VPN entries for 30% of elements using shuffleR function (and taking top [head] value)
                     let VpnClientList =
@@ -221,8 +225,8 @@ module TimeSeries =
                               | _ -> ""
                         ]
                         
-                    // TODO: set indicator for 30%     
-                      
+                    // TODO: set Progress indicator for 30%     
+                    
     
                     // generate proxy values - use VpnClientList value if present, otherwise create a new value
                     let ProxyClientList =
@@ -246,7 +250,7 @@ module TimeSeries =
                               ""
                         ]
                         
-                    // TODO: set indicator for 40% 
+                    // TODO: set Progress indicator for 40% 
             
                     // Tor values [30%] use VpnClientList or ProxyClientList value if present, otherwise create new
                     let TorClientList =
@@ -273,7 +277,7 @@ module TimeSeries =
                                   ""
                         ]
                         
-                    // TODO: set indicator for 60%     
+                    // TODO: set Progress indicator for 60%     
     
     
                     // set up a list for MAL booleans - 20% TRUE
@@ -285,7 +289,7 @@ module TimeSeries =
                               | _ -> "false"]
                         
                         
-                    // TODO: set indicator for 75%     
+                    // TODO: set Progress indicator for 75%     
             
                     // create full JSON serializable list
                     let DayRecordList =
@@ -303,7 +307,7 @@ module TimeSeries =
                               malware = MalBoolean[i]
                               }]
                         
-                    // TODO: set indicator for 90% 
+                    // TODO: set Progress indicator for 90% 
     
                     // serialize JSON
                     let options = JsonSerializerOptions()
@@ -316,7 +320,7 @@ module TimeSeries =
 
                     File.AppendAllTextAsync(filePath, DayRecordJSON) |> ignore
                     
-                    // TODO: set indicator for 100% 
+                    // TODO: set Progress indicator for 100% 
             
                     //printfn "%A" DayRecordJSON
                     
@@ -324,8 +328,24 @@ module TimeSeries =
                     printMarkedUp $"{info settings.volume} events generated for {warn customer} on {emphasize RewindDate} at {emphasize currentCycleTime} !"
             }
             
-            let daySpan = [0 .. rewind]
-        
+            
+//            let dayLabels = 
+//                [ for i = settings.rewind downto 0 do
+//                    DateTime.Now.AddDays(-(daySpan[i])).ToString("yyyy-mm-dd")
+//                ]
+//            
+//            // instantiate Progress - is this even right?    
+//            let fauxProgress =
+//                AnsiConsole.Progress()
+//            
+//            fauxProgress.Start(fun ->  // this is pseudo-code I really don't know what I'm doing here
+//                        {
+//                          [for i in 0 .. dayLabels.Length do
+//                            ctx.AddTask("[green]"+{dayLabels[i]}+"[/]")]
+//                        })
+            
+            let daySpan = [0 .. settings.rewind]
+            
             daySpan
                 |> List.map createDayForCompany
                 |> Async.Parallel
