@@ -32,7 +32,7 @@ module TimeSeries =
         member val rewind: int = 3 with get, set
         
         [<CommandOption("-c|--customers")>]
-        member val cst_id = Guid.NewGuid() with get, set
+        member val cst_id = "" with get, set
         
     type Emit() =
         inherit Command<EmitSettings>()
@@ -50,16 +50,16 @@ module TimeSeries =
 
     type EventRecord =
         { EventTime: string
-          cst_id: Guid
+          cst_id: string
           src_ip: string
-          src_port: int
+          src_port: string
           dst_ip: string
-          dst_port: int
+          dst_port: string
           cc: string
           vpn: string
           proxy: string
           tor: string
-          malware: Boolean }
+          malware: string }
 
     type CreateBackdatedSeries() =
         inherit Command<BackdateSettings>()
@@ -77,18 +77,16 @@ module TimeSeries =
             let filePath = ("datagen/"+fileName)
             
             // bring in customer GUID
-            let customer = settings.cst_id
-            
-            // set up random functions
-            let rnd = Random()
-            let shuffleR (r : Random) xs = xs |> Seq.sortBy (fun _ -> r.Next())
+            let customer : String = settings.cst_id
             
             // show current time
             let currentFileTime = DateTime.Now.ToString("hh:mm:ss.fff")
             printMarkedUp $"Current time is {emphasize currentFileTime} !"
                         
-         
             let createDayForCompany (currentDayOffset : int) = async {
+                    // set up random functions
+                    let rnd = Random()
+                    let shuffleR (r : Random) xs = xs |> Seq.sortBy (fun _ -> r.Next())
                     // set the number of days "back in time" for this iteration
                     let dateInPast =
                         DateTime.Now.AddDays(-(currentDayOffset))
@@ -175,15 +173,15 @@ module TimeSeries =
                         [ for i in 0 .. settings.volume do
                               let randomSrcPort = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomSrcPort with
-                              | i when i > 90 -> rnd.Next(1025, 65535)
-                              | _ -> 80]
+                              | i when i > 90 -> rnd.Next(1025, 65535).ToString()
+                              | _ -> "80"]
     
                     let randomDestPort =
                         [ for i in 0 .. settings.volume do
                               let randomDestPort = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomDestPort with
-                              | i when i > 90 -> rnd.Next(1025, 65535)
-                              | _ -> 80]
+                              | i when i > 90 -> rnd.Next(1025, 65535).ToString()
+                              | _ -> "80"]
     
                         
                     // TODO: set indicator for 20%   
@@ -283,14 +281,14 @@ module TimeSeries =
                         [ for i in 0 .. settings.volume do
                               let randomMAL = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomMAL with
-                              | i when i > 80 -> true
-                              | _ -> false]
+                              | i when i > 80 -> "true"
+                              | _ -> "false"]
                         
                         
                     // TODO: set indicator for 75%     
             
                     // create full JSON serializable list
-                    let DayRecordList : EventRecord List =
+                    let DayRecordList =
                         [ for i in 0 .. settings.volume do
                             { EventTime = randomTimeStamps[i]
                               cst_id = customer;
