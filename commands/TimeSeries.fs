@@ -62,6 +62,9 @@ module TimeSeries =
           tor: string
           malware: string }
 
+    [<JsonFSharpConverter>]
+    type Example = EventRecord
+
     type CreateBackdatedSeries() =
         inherit Command<BackdateSettings>()
         interface ICommandLimiter<BackdateSettings>
@@ -75,7 +78,7 @@ module TimeSeries =
             let fileDateTime =
                 DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss")
             let fileName = backDate+"_EventData_"+fileDateTime+".json"
-            let filePath = ("datagen/"+fileName)
+            let filePath = ("/Users/h3/repos/Fauxlemetry/datagen/"+fileName)
             
             // bring in customer GUID
             let customer : String = settings.cst_id
@@ -285,8 +288,8 @@ module TimeSeries =
                         [ for i in 0 .. settings.volume do
                               let randomMAL = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomMAL with
-                              | i when i > 80 -> "true"
-                              | _ -> "false"]
+                              | i when i > 80 -> "TRUE"
+                              | _ -> "FALSE"]
                         
                         
                     // TODO: set Progress indicator for 75%     
