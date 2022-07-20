@@ -77,11 +77,29 @@ module TimeSeries =
                 dateInPast.ToString("yyyy_MM_dd")
             let fileDateTime =
                 DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss")
-            let fileName = backDate+"_EventData_"+fileDateTime+".json"
-            let filePath = ("/Users/h3/repos/Fauxlemetry/datagen/"+fileName)
             
             // bring in customer GUID
             let customer : String = settings.cst_id
+            let filePath = "datagen/"+settings.cst_id+"/"
+            // create directory in run path if it doesn't exist.
+            Directory.CreateDirectory(filePath) |> ignore 
+
+            // get list of file names for directory - if they exist
+            let getFiles (dir: DirectoryInfo) =
+                dir.EnumerateFiles()
+                |> Seq.map (fun file -> file.FullName)
+                |> List.ofSeq
+            
+            let dir = DirectoryInfo(filePath)
+
+            // extract file directory info into a string list
+            let files = 
+                dir.EnumerateFiles()
+                |> Seq.map (fun file -> file.FullName)
+                |> List.ofSeq
+
+            // clear the folder of files by iterating over the list  (no harm if empty)
+            List.iter (fun s -> File.Delete(s)) files
             
             // show current time
             let currentFileTime = DateTime.Now.ToString("hh:mm:ss.fff")
@@ -95,10 +113,12 @@ module TimeSeries =
                     let dateInPast =
                         DateTime.Now.AddDays(-(currentDayOffset))
                     
-                    // create string for echoing to console    
+                    // create strings for echoing to console and file name  
                     let RewindDate =
-                        dateInPast.ToString("MM/dd/yyyy")
+                        dateInPast.ToString("yyyy-MM-dd")
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
+                    let fileName = RewindDate+"_EventData_"+fileDateTime+".json"
+                    let filePath = ("datagen/"+customer+"/"+fileName)
                     
                     // TODO: set Progress indicator for 0-1%
                         
@@ -318,11 +338,9 @@ module TimeSeries =
             
                     let DayRecordJSON =
                         JsonSerializer.Serialize (DayRecordList, options)
-    
-                    // create directory in run path if it doesn't exist.
-                    Directory.CreateDirectory(filePath) |> ignore 
+                    
                     // write the file
-                    File.AppendAllTextAsync(filePath, DayRecordJSON) |> ignore
+                    File.AppendAllText(filePath, DayRecordJSON) |> ignore
                     
                     // TODO: set Progress indicator for 100% 
             
