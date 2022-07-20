@@ -319,8 +319,9 @@ module TimeSeries =
                     let DayRecordJSON =
                         JsonSerializer.Serialize (DayRecordList, options)
     
+                    // create directory in run path if it doesn't exist.
+                    Directory.CreateDirectory(filePath) |> ignore 
                     // write the file
-
                     File.AppendAllTextAsync(filePath, DayRecordJSON) |> ignore
                     
                     // TODO: set Progress indicator for 100% 
