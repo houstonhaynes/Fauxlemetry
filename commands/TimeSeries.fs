@@ -69,12 +69,7 @@ module TimeSeries =
         inherit Command<BackdateSettings>()
         interface ICommandLimiter<BackdateSettings>
         override _.Execute(_context, settings) =
-            // create file to append all records
-            let mutable rewind = settings.rewind
-            let dateInPast =
-                DateTime.Now.AddDays(-(settings.rewind))
-            let backDate =
-                dateInPast.ToString("yyyy_MM_dd")
+            // set an attribute for creating date offsets per day/task
             let fileDateTime =
                 DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss")
             
@@ -84,22 +79,15 @@ module TimeSeries =
             // create directory in run path if it doesn't exist.
             Directory.CreateDirectory(filePath) |> ignore 
 
-            // get list of file names for directory - if they exist
-            let getFiles (dir: DirectoryInfo) =
-                dir.EnumerateFiles()
-                |> Seq.map (fun file -> file.FullName)
-                |> List.ofSeq
-            
+            // get directory info - for files - if they exist
             let dir = DirectoryInfo(filePath)
-
             // extract file directory info into a string list
             let files = 
                 dir.EnumerateFiles()
                 |> Seq.map (fun file -> file.FullName)
                 |> List.ofSeq
-
             // clear the folder of files by iterating over the list  (no harm if empty)
-            List.iter (fun s -> File.Delete(s)) files
+            List.iter (File.Delete) files
             
             // show current time
             let currentFileTime = DateTime.Now.ToString("hh:mm:ss.fff")
@@ -122,7 +110,7 @@ module TimeSeries =
                     
                     // TODO: set Progress indicator for 0-1%
                         
-                    printMarkedUp $"{info settings.volume} events started for {warn customer} on {emphasize RewindDate} at {emphasize currentCycleTime} !"
+                    printMarkedUp $"{info settings.volume} events started for {warn customer} on {emphasize RewindDate} at {info currentCycleTime} !"
                         
                     // build a list of randomized time values for hour, minute, second and millis (0 padded)
                     let randomHours =
@@ -157,9 +145,9 @@ module TimeSeries =
                         
                     // TODO: set Progress indicator for 10%    
     
-                    
+                    // TODO: This should be a lookup of some sort - by country
                     let srcIpFirstOctets = "160.72"
-                    
+                    // TODO: This should be a lookup of some sort - by company
                     let destIpFistOctets = "10.23"
                     
                     // build a list of randomized octets (3, 4) for the Source and Destination IPv4
@@ -211,7 +199,7 @@ module TimeSeries =
                               | _ -> "80"]
     
                         
-                    // TODO: set Progress indicator for 20%   
+                    // TODO: set Progress indicator for 30%   
     
                     // generate list of countries - bias is built from Cloudflare DDoS source country top 10
                     let randomCC =
@@ -230,7 +218,7 @@ module TimeSeries =
                               | _ -> "US"
                         ]
                         
-                    // TODO: set Progress indicator for 25% 
+                    // TODO: set Progress indicator for 35% 
                         
                     // Generate VPN entries for 30% of elements using shuffleR function (and taking top [head] value)
                     let VpnClientList =
@@ -248,7 +236,7 @@ module TimeSeries =
                               | _ -> ""
                         ]
                         
-                    // TODO: set Progress indicator for 30%     
+                    // TODO: set Progress indicator for 40%     
                     
     
                     // generate proxy values - use VpnClientList value if present, otherwise create a new value
@@ -273,7 +261,7 @@ module TimeSeries =
                               ""
                         ]
                         
-                    // TODO: set Progress indicator for 40% 
+                    // TODO: set Progress indicator for 50% 
             
                     // Tor values [30%] use VpnClientList or ProxyClientList value if present, otherwise create new
                     let TorClientList =
@@ -300,8 +288,7 @@ module TimeSeries =
                                   ""
                         ]
                         
-                    // TODO: set Progress indicator for 60%     
-    
+                    // TODO: set Progress indicator for 65%     
     
                     // set up a list for MAL booleans - 20% TRUE
                     let MalBoolean =
@@ -310,7 +297,6 @@ module TimeSeries =
                               match randomMAL with
                               | i when i > 80 -> "TRUE"
                               | _ -> "FALSE"]
-                        
                         
                     // TODO: set Progress indicator for 75%     
             
@@ -347,7 +333,7 @@ module TimeSeries =
                     //printfn "%A" DayRecordJSON
                     
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
-                    printMarkedUp $"{info settings.volume} events generated for {warn customer} on {emphasize RewindDate} at {emphasize currentCycleTime} !"
+                    printMarkedUp $"{warn settings.volume} events generated for {blue customer} on {info RewindDate} at {emphasize currentCycleTime} !"
             }
             
             
