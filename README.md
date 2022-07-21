@@ -1,14 +1,14 @@
 # Fauxlemetry
 
-This console app will generate delimited data with some correlation between values. The objective is primarily to seed a starting record set for a Redis instance that will be the data plane for the project. Initially the data will be loaded in batch/stream to a local Redis Stack instance.
+This console app will generate delimited data with some correlation between values. The objective is primarily to seed a starting record set for a Redis instance that will be the data plane for a Blazor server based analytics project. Initially the data will be loaded as flat files into a local Redis Stack instance - part of the targeted Blazor app's startup context. But eventually this applet will also feed small, timed packets of records directly to the Redis instance via the CLI.
 
-## Faster Than Realtime Data Generation
+## Data Generation
 
-The objective is to generate a volume of data that has certain "event rates" for combinations of values. Because there's a business scenario that dictates these events occur with a certain incident rate and span-of-time, there needs to be a specific time stamp associated with them that makes a form of business sense. For now there will be a day-wide distribution of values, but eventually other data "shapes" will be contemplated - such as "peak" activity times and event patterns that span multiple days.
+The objective is to generate a volume of data that has certain "event rates" for combinations of values. Because there's a business scenario that dictates these events occur with a certain incident rate and span-of-time, there needs to be a form of business rules around them. For now, the "generate" task is concerned with simply generating "day-wide" distributions of values. In the future other data "shapes" will be contemplated - such as "peak" activity times and event patterns that span multiple days.
 
-## Real Time Data
+## Near Real Time Data
 
-Once that initial 30-day corpus of data is generated, then the console will be used to emit streams of data that simulates real time traffic as though it comes from the originating system that would ostensibly produce these events if the Redis instance was connected to a project system.
+Once that initial 30-day corpus of data is generated, then the console will be used to emit streams of data that simulates real time traffic as though it comes from the originating system. For now we planned to simply place Fauxlemetry on the same system as the Redis instance (such as running locally for individual dev purposes) but at some point a connection to a remote Redis endpoint will likely have a role.
 
 ## Origins
 
