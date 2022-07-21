@@ -233,7 +233,7 @@ module TimeSeries =
                               | i when i > 15 && i <= 20 -> "nord"
                               | i when i > 20 && i <= 25 -> "foxyproxy"
                               | i when i > 25 && i <= 30 -> "surfshark"
-                              | _ -> ""
+                              | _ -> "-"
                         ]
                         
                     // TODO: set Progress indicator for 40%     
@@ -256,9 +256,9 @@ module TimeSeries =
                                   | i when i > 15 && i <= 20 -> "nord"
                                   | i when i > 20 && i <= 25 -> "foxyproxy"
                                   | i when i > 25 && i <= 30 -> "surfshark"
-                                  | _ -> ""
+                                  | _ -> "-"
                           else
-                              ""
+                              "-"
                         ]
                         
                     // TODO: set Progress indicator for 50% 
@@ -283,9 +283,9 @@ module TimeSeries =
                                       | i when i > 15 && i <= 20 -> "nord"
                                       | i when i > 20 && i <= 25 -> "foxyproxy"
                                       | i when i > 25 && i <= 30 -> "surfshark"
-                                      | _ -> ""
+                                      | _ -> "-"
                               else
-                                  ""
+                                  "-"
                         ]
                         
                     // TODO: set Progress indicator for 65%     
