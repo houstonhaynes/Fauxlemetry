@@ -1,6 +1,6 @@
 # Fauxlemetry 
 
-This console app will generate delimited data with some correlation between values. The objective is primarily to seed a starting record set for a Redis. That data will be loaded in batch/stream to a local Redis Stack instance, so a local Redis Stack CLI is assumed.
+This console app will generate delimited data with some correlation between values. The objective is primarily to seed a starting record set for a Redis instance that will be the data plane for the project. Initially the data will be loaded in batch/stream to a local Redis Stack instance, so a local Redis Stack CLI is assumed.
 
 ## Faster Than Realtime Data Generation
 
