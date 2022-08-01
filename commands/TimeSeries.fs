@@ -206,15 +206,16 @@ module TimeSeries =
                         [ for i in 0 .. settings.volume do
                               let randomCountry = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomCountry with
-                              | i when i < 5 -> "RU"
-                              | i when i > 5 && i <= 10-> "ID"
-                              | i when i > 10 && i <= 15  -> "EG"
-                              | i when i > 15 && i <= 20 -> "SG"
-                              | i when i > 20 && i <= 25 -> "UA"
-                              | i when i > 25 && i <= 30 -> "BR"
-                              | i when i > 30 && i <= 35 -> "DE"
-                              | i when i > 35 && i <= 45 -> "IN"
-                              | i when i > 45 && i <= 60 -> "CN"
+                              | i when i < 10 -> "UNKNOWN"
+                              | i when i > 10 && i <= 14 -> "RU"
+                              | i when i > 14 && i <= 18-> "ID"
+                              | i when i > 18 && i <= 22  -> "EG"
+                              | i when i > 22 && i <= 26 -> "SG"
+                              | i when i > 26 && i <= 30 -> "UA"
+                              | i when i > 30 && i <= 34 -> "BR"
+                              | i when i > 34 && i <= 38 -> "DE"
+                              | i when i > 38 && i <= 48 -> "IN"
+                              | i when i > 48 && i <= 64 -> "CN"
                               | _ -> "US"
                         ]
                         
@@ -225,15 +226,15 @@ module TimeSeries =
                         [ for i in 0 .. settings.volume do
                               let randomVPN = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomVPN with
-                              | i when i > 1 && i <= 3 -> "nord;proton"
-                              | i when i > 3 && i <= 5 -> "nord;surfshark"
-                              | i when i > 5 && i <= 7 -> "nord;foxyproxy"
-                              | i when i > 7 && i <= 11 -> "purevpn"
-                              | i when i > 11 && i <= 15 -> "proton"
-                              | i when i > 15 && i <= 20 -> "nord"
-                              | i when i > 20 && i <= 25 -> "foxyproxy"
-                              | i when i > 25 && i <= 30 -> "surfshark"
-                              | _ -> "-"
+                              | i when i > 1 && i <= 5 -> "nord;proton"
+                              | i when i > 5 && i <= 10 -> "nord;surfshark"
+                              | i when i > 10 && i <= 15 -> "nord;foxyproxy"
+                              | i when i > 15 && i <= 18 -> "purevpn"
+                              | i when i > 18 && i <= 21 -> "proton"
+                              | i when i > 21 && i <= 24 -> "nord"
+                              | i when i > 24 && i <= 27 -> "foxyproxy"
+                              | i when i > 27 && i <= 30 -> "surfshark"
+                              | _ -> ""
                         ]
                         
                     // TODO: set Progress indicator for 40%     
@@ -248,17 +249,17 @@ module TimeSeries =
                                   VpnClientList[i]
                               else
                                   match randomProxy with
-                                  | i when i > 1 && i <= 3 -> "nord;proton"
-                                  | i when i > 3 && i <= 5 -> "nord;surfshark"
-                                  | i when i > 5 && i <= 7 -> "nord;foxyproxy"
-                                  | i when i > 7 && i <= 11 -> "purevpn"
-                                  | i when i > 11 && i <= 15 -> "proton"
-                                  | i when i > 15 && i <= 20 -> "nord"
-                                  | i when i > 20 && i <= 25 -> "foxyproxy"
-                                  | i when i > 25 && i <= 30 -> "surfshark"
-                                  | _ -> "-"
+                                  | i when i > 1 && i <= 5 -> "nord;proton"
+                                    | i when i > 5 && i <= 10 -> "nord;surfshark"
+                                    | i when i > 10 && i <= 15 -> "nord;foxyproxy"
+                                    | i when i > 15 && i <= 18 -> "purevpn"
+                                    | i when i > 18 && i <= 21 -> "proton"
+                                    | i when i > 21 && i <= 24 -> "nord"
+                                    | i when i > 24 && i <= 27 -> "foxyproxy"
+                                    | i when i > 27 && i <= 30 -> "surfshark"
+                                    | _ -> ""
                           else
-                              "-"
+                              ""
                         ]
                         
                     // TODO: set Progress indicator for 50% 
@@ -275,17 +276,17 @@ module TimeSeries =
                                           ProxyClientList[i]
                                   else
                                       match randomTor with
-                                      | i when i > 1 && i <= 3 -> "nord;proton"
-                                      | i when i > 3 && i <= 5 -> "nord;surfshark"
-                                      | i when i > 5 && i <= 7 -> "nord;foxyproxy"
-                                      | i when i > 7 && i <= 11 -> "purevpn"
-                                      | i when i > 11 && i <= 15 -> "proton"
-                                      | i when i > 15 && i <= 20 -> "nord"
-                                      | i when i > 20 && i <= 25 -> "foxyproxy"
-                                      | i when i > 25 && i <= 30 -> "surfshark"
-                                      | _ -> "-"
+                                      | i when i > 1 && i <= 5 -> "nord;proton"
+                                        | i when i > 5 && i <= 10 -> "nord;surfshark"
+                                        | i when i > 10 && i <= 15 -> "nord;foxyproxy"
+                                        | i when i > 15 && i <= 18 -> "purevpn"
+                                        | i when i > 18 && i <= 21 -> "proton"
+                                        | i when i > 21 && i <= 24 -> "nord"
+                                        | i when i > 24 && i <= 27 -> "foxyproxy"
+                                        | i when i > 27 && i <= 30 -> "surfshark"
+                                        | _ -> ""
                               else
-                                  "-"
+                                  ""
                         ]
                         
                     // TODO: set Progress indicator for 65%     
@@ -295,7 +296,8 @@ module TimeSeries =
                         [ for i in 0 .. settings.volume do
                               let randomMAL = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomMAL with
-                              | i when i > 80 -> "TRUE"
+                              | i when i = 100 -> "UNKNOWN"
+                              | i when i >= 79 && i <= 99 -> "TRUE"
                               | _ -> "FALSE"]
                         
                     // TODO: set Progress indicator for 75%     
@@ -327,11 +329,14 @@ module TimeSeries =
                     
                     // write the file
                     File.AppendAllText(filePath, DayRecordJSON) |> ignore
+
+                    // cleanup if .DS_Store exists
+                    if File.Exists(filePath+".DS_Store") then
+                        File.Delete(filePath+".DS_Store")
                     
                     // TODO: set Progress indicator for 100% 
             
                     //printfn "%A" DayRecordJSON
-                    
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
                     printMarkedUp $"{warn settings.volume} events generated for {blue customer} on {info RewindDate} at {emphasize currentCycleTime} !"
             }
