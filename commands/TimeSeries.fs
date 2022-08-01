@@ -110,25 +110,33 @@ module TimeSeries =
                     printMarkedUp $"{info settings.volume} events started for {warn customer} on {emphasize RewindDate} at {info currentCycleTime} !"
                         
                     // build a list of randomized time values for hour, minute, second and millis (0 padded)
-                    let randomHours =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(24).ToString().PadLeft(2, '0') ]
+                    let randomHours = 
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(24).ToString().PadLeft(2, '0') 
+                        }
+                        |> Seq.toList
     
                     let randomMinutes =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(60).ToString().PadLeft(2, '0') ]
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(60).ToString().PadLeft(2, '0') 
+                        }
+                        |> Seq.toList
     
                     let randomSeconds =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(60).ToString().PadLeft(2, '0') ]
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(60).ToString().PadLeft(2, '0') 
+                        }
+                        |> Seq.toList                        
     
                     let randomMillis =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(1000).ToString().PadLeft(3, '0') ]
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(1000).ToString().PadLeft(3, '0') 
+                        }
+                        |> Seq.toList
                     
                     // build a list of fake timestamps from the above lists and sort chronologically (as list of string)
                     let randomTimeStamps =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               RewindDate
                               + " "
                               + randomHours[i]
@@ -137,7 +145,9 @@ module TimeSeries =
                               + ":"
                               + randomSeconds[i]
                               + "."
-                              + randomMillis[i] ]
+                              + randomMillis[i] 
+                        }
+                        |> Seq.toList
                         |> List.sort
                         
                     // TODO: set Progress indicator for 10%    
@@ -149,58 +159,74 @@ module TimeSeries =
                     
                     // build a list of randomized octets (3, 4) for the Source and Destination IPv4
                     let randomSrcOctets3 =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(256).ToString().PadLeft(3, '0') ]
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(256).ToString().PadLeft(3, '0') 
+                        }
+                        |> Seq.toList
                         
                     let randomSrcOctets4 =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(256).ToString().PadLeft(3, '0') ]
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(256).ToString().PadLeft(3, '0') 
+                        }
+                        |> Seq.toList
     
                     let randomDestOctets3 =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(256).ToString().PadLeft(3, '0') ]
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(256).ToString().PadLeft(3, '0') 
+                        }
+                        |> Seq.toList
     
                     let randomDestOctets4 =
-                        [ for i in 0 .. settings.volume do
-                              rnd.Next(256).ToString().PadLeft(3, '0') ]
+                        seq { for i in 0 .. settings.volume do
+                              rnd.Next(256).ToString().PadLeft(3, '0') 
+                        }
+                        |> Seq.toList
                 
                     // build a list of fake IPv4s from constants and lists above
                     let randomSrcIPv4 =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               srcIpFirstOctets
                               + "."
                               + randomSrcOctets3[i]
                               + "."
-                              + randomSrcOctets4[i] ]
+                              + randomSrcOctets4[i] 
+                        }
+                        |> Seq.toList
     
                     let randomDestIPv4 =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               destIpFistOctets
                               + "."
                               + randomDestOctets3[i]
                               + "."
-                              + randomDestOctets4[i] ]
+                              + randomDestOctets4[i]       
+                        }
+                        |> Seq.toList
     
                     let randomSrcPort =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               let randomSrcPort = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomSrcPort with
                               | i when i > 90 -> rnd.Next(1025, 65535).ToString()
-                              | _ -> "80"]
+                              | _ -> "80" 
+                        }
+                        |> Seq.toList
     
                     let randomDestPort =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               let randomDestPort = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomDestPort with
                               | i when i > 90 -> rnd.Next(1025, 65535).ToString()
-                              | _ -> "80"]
+                              | _ -> "80" 
+                        }
+                        |> Seq.toList
     
                         
                     // TODO: set Progress indicator for 30%   
     
                     // generate list of countries - bias is built from Cloudflare DDoS source country top 10
                     let randomCC =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               let randomCountry = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomCountry with
                               | i when i < 10 -> "UNKNOWN"
@@ -214,13 +240,14 @@ module TimeSeries =
                               | i when i > 38 && i <= 48 -> "IN"
                               | i when i > 48 && i <= 64 -> "CN"
                               | _ -> "US"
-                        ]
+                        }
+                        |> Seq.toList
                         
                     // TODO: set Progress indicator for 35% 
                         
                     // Generate VPN entries for 30% of elements using shuffleR function (and taking top [head] value)
                     let VpnClientList =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               let randomVPN = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomVPN with
                               | i when i > 1 && i <= 5 -> "nord;proton"
@@ -232,38 +259,40 @@ module TimeSeries =
                               | i when i > 24 && i <= 27 -> "foxyproxy"
                               | i when i > 27 && i <= 30 -> "surfshark"
                               | _ -> ""
-                        ]
+                        }
+                        |> Seq.toList
                         
                     // TODO: set Progress indicator for 40%     
                     
     
                     // generate proxy values - use VpnClientList value if present, otherwise create a new value
                     let ProxyClientList =
-                        [ for i in 0 .. settings.volume do
-                          let randomProxy = [1..100] |> shuffleR (Random()) |> Seq.head
-                          if randomProxy <= 30 then
-                              if VpnClientList[i] <> "" then
-                                  VpnClientList[i]
+                        seq { for i in 0 .. settings.volume do
+                              let randomProxy = [1..100] |> shuffleR (Random()) |> Seq.head
+                              if randomProxy <= 30 then
+                                  if VpnClientList[i] <> "" then
+                                      VpnClientList[i]
+                                  else
+                                      match randomProxy with
+                                      | i when i > 1 && i <= 5 -> "nord;proton"
+                                        | i when i > 5 && i <= 10 -> "nord;surfshark"
+                                        | i when i > 10 && i <= 15 -> "nord;foxyproxy"
+                                        | i when i > 15 && i <= 18 -> "purevpn"
+                                        | i when i > 18 && i <= 21 -> "proton"
+                                        | i when i > 21 && i <= 24 -> "nord"
+                                        | i when i > 24 && i <= 27 -> "foxyproxy"
+                                        | i when i > 27 && i <= 30 -> "surfshark"
+                                        | _ -> ""
                               else
-                                  match randomProxy with
-                                  | i when i > 1 && i <= 5 -> "nord;proton"
-                                    | i when i > 5 && i <= 10 -> "nord;surfshark"
-                                    | i when i > 10 && i <= 15 -> "nord;foxyproxy"
-                                    | i when i > 15 && i <= 18 -> "purevpn"
-                                    | i when i > 18 && i <= 21 -> "proton"
-                                    | i when i > 21 && i <= 24 -> "nord"
-                                    | i when i > 24 && i <= 27 -> "foxyproxy"
-                                    | i when i > 27 && i <= 30 -> "surfshark"
-                                    | _ -> ""
-                          else
-                              ""
-                        ]
+                                  ""
+                            }
+                        |> Seq.toList
                         
                     // TODO: set Progress indicator for 50% 
             
                     // Tor values [30%] use VpnClientList or ProxyClientList value if present, otherwise create new
                     let TorClientList =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               let randomTor = [1..100] |> shuffleR (Random()) |> Seq.head
                               if randomTor <=30 then
                                   if (VpnClientList[i] <> "" || ProxyClientList[i] <> "") then
@@ -284,18 +313,21 @@ module TimeSeries =
                                         | _ -> ""
                               else
                                   ""
-                        ]
+                        }
+                        |>Seq.toList
                         
                     // TODO: set Progress indicator for 65%     
     
                     // set up a list for MAL booleans - 20% TRUE
                     let MalBoolean =
-                        [ for i in 0 .. settings.volume do
+                        seq { for i in 0 .. settings.volume do
                               let randomMAL = [1..100] |> shuffleR (Random()) |> Seq.head
                               match randomMAL with
                               | i when i = 100 -> "UNKNOWN"
                               | i when i >= 79 && i <= 99 -> "TRUE"
-                              | _ -> "FALSE"]
+                              | _ -> "FALSE"
+                        }
+                        |> Seq.toList
                         
                     // TODO: set Progress indicator for 75%     
             
