@@ -69,18 +69,15 @@ module TimeSeries =
         inherit Command<BackdateSettings>()
         interface ICommandLimiter<BackdateSettings>
         override _.Execute(_context, settings) =
-            // set an attribute for creating date offsets per day/task
-            let fileDateTime =
-                DateTime.Now.ToString("yyyy_MM_dd_hh_mm_ss")
             
             // bring in customer GUID
             let customer : String = settings.cst_id
-            let filePath = "datagen/"+settings.cst_id+"/"
+            let directoryPath = "datagen/"+customer+"/"
             // create directory in run path if it doesn't exist.
-            Directory.CreateDirectory(filePath) |> ignore 
+            Directory.CreateDirectory(directoryPath) |> ignore 
 
             // get directory info - for files - if they exist
-            let dir = DirectoryInfo(filePath)
+            let dir = DirectoryInfo(directoryPath)
             // extract file directory info into a string list
             let files = 
                 dir.EnumerateFiles()
@@ -105,8 +102,8 @@ module TimeSeries =
                     let RewindDate =
                         dateInPast.ToString("yyyy-MM-dd")
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
-                    let fileName = RewindDate+"_EventData_"+fileDateTime+".json"
-                    let filePath = ("datagen/"+customer+"/"+fileName)
+                    let fileName = RewindDate+"_"+customer+".json"
+                    let filePath = (directoryPath+fileName)
                     
                     // TODO: set Progress indicator for 0-1%
                         
