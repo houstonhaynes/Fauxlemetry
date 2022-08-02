@@ -350,7 +350,7 @@ module TimeSeries =
 //                        {
 //                          [for i in 0 .. dayLabels.Length do
 //                            ctx.AddTask("[green]"+{dayLabels[i]}+"[/]")]
-//                        })
+//                        }) 
             
             let daySpan = [0 .. settings.rewind]
             
