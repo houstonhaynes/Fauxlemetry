@@ -4,11 +4,12 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net6.0</TargetFramework>
         <RootNamespace>fauxlemetry</RootNamespace>
-        <ServerGarbageCollection>true</ServerGarbageCollection>
+        <Platform>x64</Platform>
+        <!-- <ServerGarbageCollection>true</ServerGarbageCollection>
         <PublishSingleFile>true</PublishSingleFile>
         <SelfContained>true</SelfContained>
-        <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
-        <PublishReadyToRun>true</PublishReadyToRun>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <PublishReadyToRun>true</PublishReadyToRun> -->
     </PropertyGroup>
 
     <ItemGroup>
