@@ -248,7 +248,7 @@ module TimeSeries =
                              | i when i > 21 && i <= 24 -> "nord"
                              | i when i > 24 && i <= 27 -> "foxyproxy"
                              | i when i > 27 && i <= 30 -> "surfshark"
-                             | _ -> ""
+                             | _ -> "BLANK"
                     |]
                     
                 // TODO: set Progress indicator for 40%     
@@ -259,7 +259,7 @@ module TimeSeries =
 //                             let randomProxy = [|1..100|] |> shuffleR (Random()) |> Array.head
                              let randomProxy = rnd.Next (1, 101)
                              if randomProxy <= 30 then
-                                 if VpnClientList[i] <> "" then
+                                 if VpnClientList[i] <> "" && VpnClientList[i] <> "BLANK" then
                                      VpnClientList[i]
                                  else
                                      match randomProxy with
@@ -271,9 +271,9 @@ module TimeSeries =
                                      | i when i > 21 && i <= 24 -> "nord"
                                      | i when i > 24 && i <= 27 -> "foxyproxy"
                                      | i when i > 27 && i <= 30 -> "surfshark"
-                                     | _ -> ""
+                                     | _ -> "BLANK"
                              else
-                                 ""
+                                 "BLANK"
                     |]
                     
                 // TODO: set Progress indicator for 50% 
@@ -284,11 +284,11 @@ module TimeSeries =
 //                             let randomTor = [|1..100|] |> shuffleR (Random()) |> Array.head
                              let randomTor = rnd.Next (1, 101)
                              if randomTor <=30 then
-                                 if (VpnClientList[i] <> "" || ProxyClientList[i] <> "") then
-                                     if VpnClientList[i] <> "" then
-                                         VpnClientList[i]
+                                 if VpnClientList[i] <> "BLANK" ||  ProxyClientList[i] <> "BLANK" then
+                                     if VpnClientList[i] <> "BLANK" then
+                                        VpnClientList[i]
                                      else
-                                         ProxyClientList[i]
+                                        ProxyClientList[i]
                                  else
                                      match randomTor with
                                      | i when i > 1 && i <= 5 -> "nord;proton"
@@ -299,9 +299,9 @@ module TimeSeries =
                                      | i when i > 21 && i <= 24 -> "nord"
                                      | i when i > 24 && i <= 27 -> "foxyproxy"
                                      | i when i > 27 && i <= 30 -> "surfshark"
-                                     | _ -> ""
+                                     | _ -> "BLANK"
                              else
-                                 ""
+                                 "BLANK"
                     |]
                     
                 // TODO: set Progress indicator for 65%     
@@ -335,6 +335,7 @@ module TimeSeries =
                              tor = TorClientList[i];
                              malware = MalBoolean[i]
                              }|]
+                             
                     
                 // TODO: set Progress indicator for 90% 
 
@@ -362,7 +363,6 @@ module TimeSeries =
             
             daySpan
                 |> Array.iter createDayForCompany
-
                 // |> Async.Parallel
                 // |> Async.RunSynchronously
                 // |> ignore

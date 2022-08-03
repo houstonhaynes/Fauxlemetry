@@ -118,3 +118,4 @@ NDependOut/
 *.orig
 
 .idea/
+.DS_Store
