@@ -13,6 +13,7 @@ module TimeSeries =
     open Microsoft.FSharp.Collections
     open Spectre.Console.Cli
     open Redis.OM
+    open Redis.OM.Modeling
     open Output
 
     type EmitSettings() =
@@ -33,6 +34,9 @@ module TimeSeries =
         
         [<CommandOption("-c|--customers")>]
         member val cst_id = Guid.NewGuid().ToString() with get, set
+        
+        [<CommandOption("-e|--env")>]
+        member val environment = "redis://:tendervittles@localhost:6379" with get, set
         
     type Emit() =
         inherit Command<EmitSettings>()
@@ -60,6 +64,48 @@ module TimeSeries =
           proxy: string
           tor: string
           malware: string }
+
+    [<Document(StorageType = StorageType.Json)>]
+    type RedisEvent() =
+
+        [<RedisIdField>]
+        member val Id = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val EventTime = "" with get, set
+
+        [<Indexed(Aggregatable = true)>]        
+        member val cst_id  = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val src_ip = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val src_port = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val dst_ip = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val dst_port = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val cc = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val vpn = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val proxy = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val tor = "" with get, set
+
+        [<Indexed(Sortable = true)>]
+        member val malware = false with get, set
+
+
+
     
     [<JsonFSharpConverter>]
     type Example = EventRecord
@@ -90,7 +136,7 @@ module TimeSeries =
             let currentFileTime = DateTime.Now.ToString("hh:mm:ss.fff")
             printMarkedUp $"Current time is {emphasize currentFileTime} !"
                
-            let provider = RedisConnectionProvider("redis://localhost:6379")
+            let provider = RedisConnectionProvider(settings.environment)
             let connection = provider.Connection
                         
             let createDayForCompany (currentDayOffset : int) =
@@ -233,7 +279,7 @@ module TimeSeries =
                                  | i when i > 26 && i <= 30 -> "UA"
                                  | i when i > 30 && i <= 34 -> "BR"
                                  | i when i > 34 && i <= 38 -> "DE"
-                                 | i when i > 38 && i <= 48 -> "IN"
+                                 | i when i > 38 && i <= 48 -> "IND"
                                  | i when i > 48 && i <= 64 -> "CN"
                                  | _ -> "US"
                         |]
@@ -344,7 +390,7 @@ module TimeSeries =
                                  
                                    
                     let serializeRecord event =
-                        connection.Execute("JSON.SET", Guid.NewGuid().ToString(), "$", JsonSerializer.Serialize(event)) |> ignore
+                        connection.Execute("JSON.SET", customer+"."+Guid.NewGuid().ToString(), "$", JsonSerializer.Serialize(event)) |> ignore
                     
                     // TODO: set Progress indicator for 90% 
 
@@ -376,5 +422,7 @@ module TimeSeries =
                 |> Async.Parallel
                 |> Async.RunSynchronously
                 |> ignore
-                //       
+            
+            connection.CreateIndex(typeof(RedisEvent)) |> ignore
+
             0
