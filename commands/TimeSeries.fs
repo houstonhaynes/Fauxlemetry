@@ -115,9 +115,9 @@ module TimeSeries =
             let mutable currentTime = DateTime.Now.ToString("hh:mm:ss.fff")
             let customer = settings.cst_id
 
+            StackExchange.Redis.ConnectionMultiplexer.SetFeatureFlag("preventthreadtheft", true)    
             let provider = RedisConnectionProvider(settings.environment)
             let connection = provider.Connection
-            StackExchange.Redis.ConnectionMultiplexer.SetFeatureFlag("preventthreadtheft", true)    
 
             let RedisCommand = "FLUSHALL"
 
