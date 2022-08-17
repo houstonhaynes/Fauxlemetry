@@ -62,7 +62,7 @@ module TimeSeries =
           tor: string
           malware: string }
 
-    [<Document(StorageType = StorageType.Json, Prefixes = [| "ACA.Customer:" |])>]
+    [<Document(StorageType = StorageType.Json, Prefixes = [| "Customer:" |])>]
     type RawDataModel() =
 
         [<RedisIdField>] 
@@ -375,7 +375,7 @@ module TimeSeries =
                         |> Array.filter (fun record -> record.epoch_timestamp < (DateTimeOffset(DateTime.Now.ToUniversalTime()).ToUnixTimeMilliseconds()))
 
                     let serializeRecord (event: EventRecord) = 
-                        let newKey = "ACA.Customer"+":"+customer+":"+Guid.NewGuid().ToString()
+                        let newKey = "Customer"+":"+customer+":"+Guid.NewGuid().ToString()
                         connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
                         let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
                         let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(30)).ToUnixTimeSeconds()
@@ -648,7 +648,7 @@ module TimeSeries =
                         |]
     
                     let serializeRecord (event: EventRecord) = 
-                        let newKey = "ACA.Customer"+":"+customer+":"+Guid.NewGuid().ToString()
+                        let newKey = "Customer"+":"+customer+":"+Guid.NewGuid().ToString()
                         connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
                         let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
                         let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(30)).ToUnixTimeSeconds()
