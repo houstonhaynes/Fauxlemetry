@@ -63,7 +63,7 @@ module TimeSeries =
           malware: string }
 
     [<Document(StorageType = StorageType.Json, Prefixes = [| "Customer:" |])>]
-    type RawDataModel() =
+    type CustomerEventModel() =
 
         [<RedisIdField>] 
         member val Id = "" with get, set 
@@ -139,7 +139,7 @@ module TimeSeries =
             if settings.indexRedis = true then
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                 printMarkedUp $"Sending {warn RedisCommand} to Redis {info currentTime}"
-                connection.CreateIndex(typeof<RawDataModel>) |> ignore
+                connection.CreateIndex(typeof<CustomerEventModel>) |> ignore
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                 printMarkedUp $"Redis {blue RedisCommand} completed at {info currentTime}"
                         
