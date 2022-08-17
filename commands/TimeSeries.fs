@@ -669,12 +669,9 @@ module TimeSeries =
 
             // transmit records
             let rec emitOnTimer() =
-                let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
-                printMarkedUp $"60 seconds 'sleep' for {emphasize customer} at {warn currentCycleTime}"
                 Thread.Sleep(60000)
                 createMinuteForCompany |> Async.Start
-
-                
+    
                 if Console.KeyAvailable then 
                     match Console.ReadKey().Key with
                     | ConsoleKey.Q -> ()
