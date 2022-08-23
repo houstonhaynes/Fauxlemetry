@@ -9,8 +9,8 @@ let main argv =
     app.Configure (fun config ->
 
         config
-            .AddCommand<TimeSeries.Emit>("emit")
-            .WithAlias("e")
+            .AddCommand<TimeSeries.Emit>("drip")
+            .WithAlias("d")
             .WithDescription("Creates semi-random volumes of events and sends by interval")
         |> ignore
 

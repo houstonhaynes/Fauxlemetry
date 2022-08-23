@@ -19,10 +19,10 @@ module TimeSeries =
         inherit CommandSettings()
 
         [<CommandOption("-v|--vol")>]
-        member val volume = 100 with get, set
+        member val volume = 10000 with get, set
 
         [<CommandOption("-r|--rew")>]
-        member val rewind: int = 3 with get, set
+        member val rewind: int = 32 with get, set
         
         [<CommandOption("-c|--cust")>]
         member val cst_id = Guid.NewGuid().ToString() with get, set
@@ -40,13 +40,16 @@ module TimeSeries =
         inherit CommandSettings()
 
         [<CommandOption("-v|--vol")>]
-        member val volume = 1000 with get, set
+        member val volume = 10000 with get, set
         
         [<CommandOption("-c|--cust")>]
         member val cst_id = Guid.NewGuid().ToString() with get, set
         
         [<CommandOption("-e|--env")>]
         member val environment = "redis://localhost:6379" with get, set
+
+        [<CommandOption("-t|--ttldays")>]
+        member val ttl: int = 31 with get, set
 
     type EventRecord =
         { epoch_timestamp: int64
@@ -63,7 +66,7 @@ module TimeSeries =
           malware: string }
 
     [<Document(StorageType = StorageType.Json, Prefixes = [| "Customer:" |])>]
-    type CustomerEventModel() =
+    type RawDataModel() =
 
         [<RedisIdField>] 
         member val Id = "" with get, set 
@@ -115,9 +118,9 @@ module TimeSeries =
             let mutable currentTime = DateTime.Now.ToString("hh:mm:ss.fff")
             let customer = settings.cst_id
 
-            StackExchange.Redis.ConnectionMultiplexer.SetFeatureFlag("preventthreadtheft", true)    
             let provider = RedisConnectionProvider(settings.environment)
             let connection = provider.Connection
+            StackExchange.Redis.ConnectionMultiplexer.SetFeatureFlag("preventthreadtheft", true)    
 
             let RedisCommand = "FLUSHALL"
 
@@ -139,7 +142,7 @@ module TimeSeries =
             if settings.indexRedis = true then
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                 printMarkedUp $"Sending {warn RedisCommand} to Redis {info currentTime}"
-                connection.CreateIndex(typeof<CustomerEventModel>) |> ignore
+                connection.CreateIndex(typeof<RawDataModel>) |> ignore
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                 printMarkedUp $"Redis {blue RedisCommand} completed at {info currentTime}"
                         
@@ -374,11 +377,12 @@ module TimeSeries =
                         |]
                         |> Array.filter (fun record -> record.epoch_timestamp < (DateTimeOffset(DateTime.Now.ToUniversalTime()).ToUnixTimeMilliseconds()))
 
+                    let TTLValue = settings.rewind-1
                     let serializeRecord (event: EventRecord) = 
-                        let newKey = "Customer"+":"+customer+":"+Guid.NewGuid().ToString()
+                        let newKey: string = "Customer:"+customer+":"+Guid.NewGuid().ToString()
                         connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
                         let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
-                        let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(30)).ToUnixTimeSeconds()
+                        let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(TTLValue)).ToUnixTimeSeconds()
                         let eventTtl = eventExpirationInSeconds - dateTimeNowSeconds
                         connection.Execute("EXPIRE", newKey, eventTtl.ToString())       
 
@@ -646,12 +650,13 @@ module TimeSeries =
                                  malware = MalBoolean[i]
                                  }
                         |]
-    
+                    
+                    let TTLValue = settings.ttl
                     let serializeRecord (event: EventRecord) = 
-                        let newKey = "Customer"+":"+customer+":"+Guid.NewGuid().ToString()
+                        let newKey: string = "Customer:"+customer+":"+Guid.NewGuid().ToString()
                         connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
                         let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
-                        let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(30)).ToUnixTimeSeconds()
+                        let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(TTLValue)).ToUnixTimeSeconds()
                         let eventTtl = eventExpirationInSeconds - dateTimeNowSeconds
                         connection.Execute("EXPIRE", newKey, eventTtl.ToString())     
     
@@ -667,11 +672,12 @@ module TimeSeries =
                     printMarkedUp $"{warn DayRecords.Length} events generated for {blue customer} at {emphasize currentCycleTime}"
                 }           
 
+
             // transmit records
             let rec emitOnTimer() =
                 Thread.Sleep(60000)
                 createMinuteForCompany |> Async.Start
-    
+                
                 if Console.KeyAvailable then 
                     match Console.ReadKey().Key with
                     | ConsoleKey.Q -> ()
