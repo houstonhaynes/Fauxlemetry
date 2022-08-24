@@ -59,7 +59,7 @@ If you don't pass a specific value, then the default (currently 1000) will be us
 member val cst_id = Guid.NewGuid().ToString() with get, set
 ```
 
-Customer [-c or --cust] is a string value of the GUID that represents a Telos customer as represented in the Customer database. If you don't supply a value, a new GUID will be generated and send into 
+Customer [-c or --cust] is a string value of the GUID that represents a customer as represented in the Customer database. If you don't supply a value, a new GUID will be generated and send into 
 
 ### environment parameter
 
