@@ -36,8 +36,8 @@ module TimeSeries =
         [<CommandOption("-i|--idx")>]
         member val indexRedis = false with get, set
 
-        [<CommandOption("-a|--aca")>]
-        member val indexACA = false with get, set
+        [<CommandOption("-a|--admin")>]
+        member val indexAdmin = false with get, set
 
 
     type EmitSettings() =
@@ -162,8 +162,8 @@ module TimeSeries =
     [<Document(StorageType = StorageType.Json, 
                                 Prefixes = [| "Customer:" |], 
                                 Stopwords = [||], 
-                                IndexName = "ACA-idx")>]
-    type CustomerACA() =
+                                IndexName = "ADMIN-idx")>]
+    type CustomerADMIN() =
 
         [<RedisIdField>] [<Indexed>]
         member val Id = "" with get, set 
@@ -233,14 +233,14 @@ module TimeSeries =
                         currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                         printMarkedUp $"Redis {blue RedisCommand} completed at {info currentTime}"
 
-            let AcaIndexCommand = "CREATE ACA INDEX"
+            let AdminIndexCommand = "CREATE ADMIN INDEX"
 
-            if settings.indexACA = true then
+            if settings.indexAdmin = true then
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
-                printMarkedUp $"Sending {warn AcaIndexCommand} to Redis {info currentTime}"
-                connection.CreateIndex(typeof<CustomerACA>) |> ignore
+                printMarkedUp $"Sending {warn AdminIndexCommand} to Redis {info currentTime}"
+                connection.CreateIndex(typeof<CustomerADMIN>) |> ignore
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
-                printMarkedUp $"Redis {blue AcaIndexCommand} completed at {info currentTime}"
+                printMarkedUp $"Redis {blue AdminIndexCommand} completed at {info currentTime}"
 
 
             let RedisCommand = "CREATE CUSTOMER INDEX"
