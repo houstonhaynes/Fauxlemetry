@@ -15,16 +15,18 @@ There are two commands at present - "generate" and "drip" - which are detailed b
 From the project's directory, you can run a command similar to the following:
 
 ```bash
-dotnet run g --rew 32 --vol 33500 --env "redis://localhost:6379" --flush true --idx true --cust dad86e16-9793-4911-81b5-23c8d458ae32
+dotnet run g --rew 32 --vol 33500 --env "redis://localhost:6379" --flush true --idx true --admin true --cust dad86e16-9793-4911-81b5-23c8d458ae32
 ```
 
 or (when running a published version of the app) run from the publish directory
 
 ```bash
-./Fauxlemetry g --rew 32 --vol 33500 --env "redis://localhost:6379" --flush true --idx true --cust dad86e16-9793-4911-81b5-23c8d458ae32
+./Fauxlemetry g --rew 32 --vol 33500 --env "redis://localhost:6379" --flush true --idx true --cust --admin true dad86e16-9793-4911-81b5-23c8d458ae32
 ```
 
 This will generate 31 full days of data *plus* a spread of records that account for the current day up to the time of writing into Redis. This range of days is determined by the rewind '--rew' argument. The records for each day are transmitted into the instance on their own processing thread. So there is some parallelism in the process - however *inside* each day-length process processing is fully synchronous.
+
+Note that with the "--admin" value set to "true" that a second index is created which is prefixed on all "Customer" records. This is to support multi-tenancy of the data on a customer level - while also providing admins with access to all data.
 
 ## Details
 
