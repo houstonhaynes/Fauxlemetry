@@ -97,6 +97,16 @@ member val indexRedis = false with get, set
 
 Index [-i or --idx] creates an index for accessing records with the "Customer:" Redis key prefix. Similar to the "Flush" command above there will be scenarios where you only want to send the command once. So again here it defaults to false and would need to be set to "true" at the command line in order for the index to be sent.
 
+### Generate Admin index
+
+```fsharp
+[<CommandOption("-a|--admin")>]
+member val indexAdmin = false with get, set
+```
+
+indexAdmin [-a or --admin] creates a master index for accessing records across all customers. Similar to the "Flush" command above there will be scenarios where you only want to send the command once. So again here it defaults to false and would need to be set to "true" at the command line in order for the index to be sent.
+
+
 ## Generate Command's Console Output
 
 As records are generated the output will look similar to the following:
