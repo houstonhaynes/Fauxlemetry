@@ -36,6 +36,10 @@ module TimeSeries =
         [<CommandOption("-i|--idx")>]
         member val indexRedis = false with get, set
 
+        [<CommandOption("-a|--aca")>]
+        member val indexACA = false with get, set
+
+
     type EmitSettings() =
         inherit CommandSettings()
 
@@ -65,10 +69,103 @@ module TimeSeries =
           tor: string
           malware: string }
 
-    [<Document(StorageType = StorageType.Json, Prefixes = [| "Customer:" |])>]
-    type RawDataModel() =
+    [<Document(StorageType = StorageType.Json, 
+                                Prefixes = [| "Customer:61B2BF72-EC2E-450B-A454-D2E11591C0C6:" |], 
+                                Stopwords = [||], 
+                                IndexName = "Customer61B-idx")>]
+    type Customer61B() =
 
-        [<RedisIdField>] 
+        [<RedisIdField>] [<Indexed>]
+        member val Id = "" with get, set 
+
+        [<Indexed(Aggregatable = true)>]
+        member val epoch_timestamp : int64 = 0 with get, set
+
+        [<Indexed>]
+        member val EventTime = "" with get, set
+
+        [<Indexed>]        
+        member val cst_id  = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val src_ip = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val src_port = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val dst_ip = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val dst_port = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val cc = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val vpn = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val proxy = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val tor = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val malware = false with get, set
+
+    [<Document(StorageType = StorageType.Json, 
+                                Prefixes = [| "Customer:dafe3354-5d45-4aef-9f94-6ee47f32ca16:" |], 
+                                Stopwords = [||], 
+                                IndexName = "Customerdaf-idx")>]
+    type Customerdaf() =
+
+        [<RedisIdField>] [<Indexed>]
+        member val Id = "" with get, set 
+
+        [<Indexed(Aggregatable = true)>]
+        member val epoch_timestamp : int64 = 0 with get, set
+
+        [<Indexed>]
+        member val EventTime = "" with get, set
+
+        [<Indexed>]        
+        member val cst_id  = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val src_ip = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val src_port = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val dst_ip = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val dst_port = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val cc = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val vpn = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val proxy = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val tor = "" with get, set
+
+        [<Searchable(Aggregatable = true)>]
+        member val malware = false with get, set
+
+    [<Document(StorageType = StorageType.Json, 
+                                Prefixes = [| "Customer:" |], 
+                                Stopwords = [||], 
+                                IndexName = "ACA-idx")>]
+    type CustomerACA() =
+
+        [<RedisIdField>] [<Indexed>]
         member val Id = "" with get, set 
 
         [<Indexed(Aggregatable = true)>]
@@ -136,13 +233,27 @@ module TimeSeries =
                         currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                         printMarkedUp $"Redis {blue RedisCommand} completed at {info currentTime}"
 
+            let AcaIndexCommand = "CREATE ACA INDEX"
 
-            let RedisCommand = "CREATE INDEX"
+            if settings.indexACA = true then
+                currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
+                printMarkedUp $"Sending {warn AcaIndexCommand} to Redis {info currentTime}"
+                connection.CreateIndex(typeof<CustomerACA>) |> ignore
+                currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
+                printMarkedUp $"Redis {blue AcaIndexCommand} completed at {info currentTime}"
+
+
+            let RedisCommand = "CREATE CUSTOMER INDEX"
+
+            let customerType : Type = 
+                match customer with 
+                | i when i = "61B2BF72-EC2E-450B-A454-D2E11591C0C6" -> typeof<Customer61B>
+                | _ -> typeof<Customerdaf>
 
             if settings.indexRedis = true then
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                 printMarkedUp $"Sending {warn RedisCommand} to Redis {info currentTime}"
-                connection.CreateIndex(typeof<RawDataModel>) |> ignore
+                connection.CreateIndex(customerType) |> ignore
                 currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
                 printMarkedUp $"Redis {blue RedisCommand} completed at {info currentTime}"
                         
@@ -208,8 +319,12 @@ module TimeSeries =
 
                     // TODO: This should be a lookup of some sort - by country
                     let srcIpFirstOctets = "160.72"
-                    // TODO: This should be a lookup of some sort - by company
-                    let destIpFistOctets = "10.23"
+
+                    let destIpFirstOctets = 
+                                 match customer with
+                                 | "61B2BF72-EC2E-450B-A454-D2E11591C0C6" -> "11.18"
+                                 | "dafe3354-5d45-4aef-9f94-6ee47f32ca16" -> "12.19"
+                                 | _ -> "10.18"
                     
                     // build an array of randomized octets (3, 4) for the Source and Destination IPv4
                     let randomSrcOctets3 =
@@ -244,7 +359,7 @@ module TimeSeries =
 
                     let randomDestIPv4 =
                         [| for i in 0 .. (settings.volume-1)->
-                                 destIpFistOctets
+                                 destIpFirstOctets
                                  + "."
                                  + randomDestOctets3[i]
                                  + "."
@@ -280,7 +395,7 @@ module TimeSeries =
                                  | i when i > 26 && i <= 30 -> "UA"
                                  | i when i > 30 && i <= 34 -> "BR"
                                  | i when i > 34 && i <= 38 -> "DE"
-                                 | i when i > 38 && i <= 48 -> "IND"
+                                 | i when i > 38 && i <= 48 -> "IN"
                                  | i when i > 48 && i <= 64 -> "CN"
                                  | _ -> "US"
                         |]
@@ -379,7 +494,7 @@ module TimeSeries =
 
                     let TTLValue = settings.rewind-1
                     let serializeRecord (event: EventRecord) = 
-                        let newKey: string = "Customer:"+customer+":"+Guid.NewGuid().ToString()
+                        let newKey = "Customer:"+customer+":"+Guid.NewGuid().ToString()
                         connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
                         let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
                         let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(TTLValue)).ToUnixTimeSeconds()
@@ -483,8 +598,14 @@ module TimeSeries =
     
                     // TODO: This should be a lookup of some sort - by country
                     let srcIpFirstOctets = "160.72"
-                    // TODO: This should be a lookup of some sort - by company
-                    let destIpFistOctets = "10.23"
+                    
+                    
+                    let destIpFirstOctets = 
+                                 match customer with
+                                 | "61B2BF72-EC2E-450B-A454-D2E11591C0C6" -> "11.18"
+                                 | "dafe3354-5d45-4aef-9f94-6ee47f32ca16" -> "12.19"
+                                 | _ -> "10.18"
+
                     
                     // build an array of randomized octets (3, 4) for the Source and Destination IPv4
                     let randomSrcOctets3 =
@@ -519,7 +640,7 @@ module TimeSeries =
     
                     let randomDestIPv4 =
                         [| for i in 0 .. (recordsPerMinute-1)->
-                                 destIpFistOctets
+                                 destIpFirstOctets
                                  + "."
                                  + randomDestOctets3[i]
                                  + "."
@@ -555,7 +676,7 @@ module TimeSeries =
                                  | i when i > 26 && i <= 30 -> "UA"
                                  | i when i > 30 && i <= 34 -> "BR"
                                  | i when i > 34 && i <= 38 -> "DE"
-                                 | i when i > 38 && i <= 48 -> "IND"
+                                 | i when i > 38 && i <= 48 -> "IN"
                                  | i when i > 48 && i <= 64 -> "CN"
                                  | _ -> "US"
                         |]
@@ -653,7 +774,7 @@ module TimeSeries =
                     
                     let TTLValue = settings.ttl
                     let serializeRecord (event: EventRecord) = 
-                        let newKey: string = "Customer:"+customer+":"+Guid.NewGuid().ToString()
+                        let newKey = "Customer:"+customer+":"+Guid.NewGuid().ToString()
                         connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
                         let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
                         let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(TTLValue)).ToUnixTimeSeconds()
@@ -671,19 +792,18 @@ module TimeSeries =
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
                     printMarkedUp $"{warn DayRecords.Length} events generated for {blue customer} at {emphasize currentCycleTime}"
                 }           
-
-
+            
+            let sleep = 60000
+            let command = "drip"
+            let time = sleep / 1000
+            printMarkedUp $"The {blue command} will emit events every {warn time} seconds"        
             // transmit records
             let rec emitOnTimer() =
-                Thread.Sleep(60000)
+                Thread.Sleep(sleep)
                 createMinuteForCompany |> Async.Start
                 
-                if Console.KeyAvailable then 
-                    match Console.ReadKey().Key with
-                    | ConsoleKey.Q -> ()
-                    | _ -> emitOnTimer()
-                else                    
-                    emitOnTimer()
+                emitOnTimer()
+
                 
             emitOnTimer()
                            
