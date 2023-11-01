@@ -16,6 +16,7 @@
         <Compile Include="spectre/Output.fs" />
         <Compile Include="commands/TimeSeries.fs" />
         <Compile Include="Program.fs" />
+        <Content Include="settings.json" />
         <Folder Include="datagen" />
         <Content Include="runtimeconfig.json" />
     </ItemGroup>
@@ -27,7 +28,8 @@
         <PackageReference Include="FSharp.SystemTextJson" Version="0.19.13" />
         <PackageReference Include="FsRandom" Version="1.4.0.1" />
         <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
-        <PackageReference Include="Redis.OM" Version="0.2.1" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="Npgsql.FSharp" Version="5.7.0" />
         <PackageReference Include="Spectre.Console" Version="0.44.0" />
         <PackageReference Update="FSharp.Core" Version="6.0.5" />
     </ItemGroup>

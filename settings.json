@@ -1,0 +1,3 @@
+﻿{
+  "connection": "Host=localhost;Username=postgres;Password=yomo;Database=aidendb",
+}

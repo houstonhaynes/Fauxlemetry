@@ -1,18 +1,17 @@
 namespace Commands
 
 open System
+open System.IO
+open System.Net
 open Microsoft.FSharp.Control
 
 
 module TimeSeries =
-    open System.Text.Json
-    open System.Text.Json.Serialization
-    open System.Threading
     open System.Threading.Tasks
     open Microsoft.FSharp.Collections
     open Spectre.Console.Cli
-    open Redis.OM
-    open Redis.OM.Modeling
+    open Newtonsoft.Json
+    open Npgsql
     open Output
 
     // config to generate a number of entries for a given day in the past
@@ -26,16 +25,9 @@ module TimeSeries =
         member val rewind: int = 32 with get, set
         
         [<CommandOption("-c|--cust")>]
-        member val cst_id = Guid.NewGuid().ToString("N") with get, set
+        member val cst_id = Guid.ParseExact(Guid.NewGuid().ToString("N"), "N") with get, set
         
-        [<CommandOption("-e|--env")>]
-        member val environment = "redis://localhost:6379" with get, set
 
-        [<CommandOption("-f|--flush")>]
-        member val flushRedis = false with get, set
-
-        [<CommandOption("-i|--idx")>]
-        member val indexRedis = false with get, set
 
     type EmitSettings() =
         inherit CommandSettings()
@@ -44,108 +36,49 @@ module TimeSeries =
         member val volume = 10000 with get, set
         
         [<CommandOption("-c|--cust")>]
-        member val cst_id = Guid.NewGuid().ToString("N") with get, set
+        member val cst_id = Guid.ParseExact(Guid.NewGuid().ToString("N"), "N") with get, set
         
         [<CommandOption("-e|--env")>]
-        member val environment = "redis://localhost:6379" with get, set
+        member val environment = "redis://localhost:5432" with get, set
 
         [<CommandOption("-t|--ttldays")>]
         member val ttl: int = 31 with get, set
 
     type EventRecord =
-        { epoch_timestamp: int64
-          EventTime: string
-          cst_id: string
-          src_ip: string
-          src_port: string
-          dst_ip: string
-          dst_port: string
+        { event_time: DateTime
+          cst_id: Guid
+          src_ip: IPAddress
+          src_port: int
+          dst_ip: IPAddress
+          dst_port: int
           cc: string
           vpn: string
           proxy: string
           tor: string
           malware: string }
-
-    [<Document(StorageType = StorageType.Json, Stopwords = [| |], Prefixes = [|"Customer:"|])>]
-    type RawDataModel() =
-
-        [<RedisIdField>] [<Indexed>]
-        member val Id = "" with get, set 
-
-        [<Indexed(Aggregatable = true)>]
-        member val epoch_timestamp : int64 = 0 with get, set
-
-        [<Indexed>]
-        member val EventTime = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]        
-        member val cst_id  = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val src_ip = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val src_port = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val dst_ip = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val dst_port = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val cc = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val vpn = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val proxy = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val tor = "" with get, set
-
-        [<Searchable(Aggregatable = true)>]
-        member val malware = false with get, set
     
-    [<JsonFSharpConverter>]
-    type Example = EventRecord
-
+    type Settings = { connection: string }
+    
+    let convertToInet (ipStr: string) =
+        IPAddress.Parse(ipStr: string)
+        
     type CreateBackdatedSeries() =
         inherit Command<BackdateSettings>()
         interface ICommandLimiter<BackdateSettings>
         override _.Execute(_context, settings) =
             
-            let mutable currentTime = DateTime.Now.ToString("hh:mm:ss.fff")
             let customer = settings.cst_id
 
-            let provider = RedisConnectionProvider(settings.environment)
-            let connection = provider.Connection
-            StackExchange.Redis.ConnectionMultiplexer.SetFeatureFlag("preventthreadtheft", true)    
-
-            let RedisCommand = "FLUSHALL"
-
-            let asyncFlushall =
-                async {
-                    connection.Execute(RedisCommand) |> ignore
-                    currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
-                    printMarkedUp $"Sending {warn RedisCommand} to Redis at {info currentTime}"
-                }
-
-            if settings.flushRedis = true 
-                then    asyncFlushall  |> Async.RunSynchronously
-                        currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
-                        printMarkedUp $"Redis {blue RedisCommand} completed at {info currentTime}"
-
-
-            let RedisCommand = "CREATE INDEX STOPWORDS 0"
-
-            if settings.indexRedis = true then
-                currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
-                printMarkedUp $"Sending {warn RedisCommand} to Redis {info currentTime}"
-                connection.CreateIndex(typeof<RawDataModel>) |> ignore
-                currentTime <- DateTime.Now.ToString("hh:mm:ss.fff")
-                printMarkedUp $"Redis {blue RedisCommand} completed at {info currentTime}"
+            let getConnectionString () =
+                let json = File.ReadAllText("settings.json")
+                
+                try
+                    let settings = JsonConvert.DeserializeObject<Settings>(json)
+                    Some settings.connection
+                with
+                    | :? JsonException -> 
+                        printfn "Error parsing JSON"
+                        None
                         
             let createDayForCompany (currentDayOffset : int) =
                 async {
@@ -185,7 +118,7 @@ module TimeSeries =
                         |]
                     
                     // build an array of fake timestamps from the above arrays and sort chronologically (as array of string)
-                    let randomTimeStamps =
+                    let randomTimeStrings =
                         [| for i in 0 .. (settings.volume-1)->
                                  RewindDate
                                  + " "
@@ -197,21 +130,20 @@ module TimeSeries =
                                  + "."
                                  + randomMillis[i] 
                         |]
+                        
+                    let randomTimeStamps = 
+                        randomTimeStrings
+                        |> Array.map (fun ts -> DateTime.Parse(ts).ToUniversalTime())
                     
                     // Prevents the creating of an unnecessary array
                     randomTimeStamps
                     |> Array.sortInPlace
                     
-                    let epoch_timestamps : int64 array =
-                        [| for i in 0 .. (settings.volume-1) -> 
-                            DateTimeOffset(DateTime.Parse(randomTimeStamps[i]).ToUniversalTime()).ToUnixTimeMilliseconds()
-                        |]
-
                     // TODO: This should be a lookup of some sort - by country
                     let srcIpFirstOctets = "160.72"
                     
                     let destIpFirstOctets = 
-                        match customer with
+                        match customer.ToString() with
                         | "61B2BF72EC2E450BA454D2E11591C0C6" -> "11.18"
                         | "dafe33545d454aef9f946ee47f32ca16" -> "12.19"
                         | _ -> "10.18"
@@ -219,22 +151,22 @@ module TimeSeries =
                     // build an array of randomized octets (3, 4) for the Source and Destination IPv4
                     let randomSrcOctets3 =
                         [| for i in 0 .. (settings.volume-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
                         
                     let randomSrcOctets4 =
                         [| for i in 0 .. (settings.volume-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
 
                     let randomDestOctets3 =
                         [| for i in 0 .. (settings.volume-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
 
                     let randomDestOctets4 =
                         [| for i in 0 .. (settings.volume-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
                 
                     // build an array of fake IPv4s from constants and arrays above
@@ -246,6 +178,10 @@ module TimeSeries =
                                  + "."
                                  + randomSrcOctets4[i] 
                         |]
+                        
+                    let randomSrcIPv4Inet = 
+                        randomSrcIPv4
+                        |> Array.map convertToInet
 
                     let randomDestIPv4 =
                         [| for i in 0 .. (settings.volume-1)->
@@ -255,21 +191,25 @@ module TimeSeries =
                                  + "."
                                  + randomDestOctets4[i]       
                         |]
+                        
+                    let randomDestIPv4Inet = 
+                        randomDestIPv4
+                        |> Array.map convertToInet
 
                     let randomSrcPort =
                         [| for i in 0 .. (settings.volume-1)->
                                  let randomSrcPort = rnd.Next (1, 101)
                                  match randomSrcPort with
-                                 | i when i > 90 -> rnd.Next(1025, 65535).ToString()
-                                 | _ -> "80" 
+                                 | i when i > 90 -> rnd.Next(1025, 65535)
+                                 | _ -> 80
                         |]
 
                     let randomDestPort =
                         [| for i in 0 .. (settings.volume-1)->
                                  let randomDestPort = rnd.Next (1, 101)
                                  match randomDestPort with
-                                 | i when i > 90 -> rnd.Next(1025, 65535).ToString()
-                                 | _ -> "80" 
+                                 | i when i > 90 -> rnd.Next(1025, 65535)
+                                 | _ -> 80
                         |]
                      
                     // generate array of countries - bias is built from Cloudflare DDoS source country top 10
@@ -366,12 +306,11 @@ module TimeSeries =
                     // create full JSON serializable array
                     let DayRecords =
                         [| for i in 0 .. (settings.volume-1)->
-                             { epoch_timestamp = epoch_timestamps[i];
-                                 EventTime = randomTimeStamps[i];
+                             {   event_time = randomTimeStamps[i];
                                  cst_id = customer;
-                                 src_ip = randomSrcIPv4[i];
+                                 src_ip = randomSrcIPv4Inet[i];
                                  src_port = randomSrcPort[i];
-                                 dst_ip = randomDestIPv4[i];
+                                 dst_ip = randomDestIPv4Inet[i];
                                  dst_port = randomDestPort[i];
                                  cc = randomCC[i];
                                  vpn = VpnClients[i];
@@ -380,25 +319,39 @@ module TimeSeries =
                                  malware = MalBoolean[i]
                                  }
                         |]
-                        |> Array.filter (fun record -> record.epoch_timestamp < (DateTimeOffset(DateTime.Now.ToUniversalTime()).ToUnixTimeMilliseconds()))
+                        |> Array.filter (fun record -> 
+                        let eventTimeInMs = DateTimeOffset(record.event_time).ToUnixTimeMilliseconds()
+                        let currentTimeInMs = DateTimeOffset(DateTime.Now.ToUniversalTime()).ToUnixTimeMilliseconds()
+                        eventTimeInMs < currentTimeInMs)
+                        
 
-                    let TTLValue = settings.rewind-1
-                    let serializeRecord (event: EventRecord) = 
-                        let newKey = "Customer:"+customer+":"+Guid.NewGuid().ToString("N")
-                        connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
-                        let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
-                        let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(TTLValue)).ToUnixTimeSeconds()
-                        let eventTtl = eventExpirationInSeconds - dateTimeNowSeconds
-                        connection.Execute("EXPIRE", newKey, eventTtl.ToString())       
-
-                    // serialize JSON
-                    let options = JsonSerializerOptions()
-                    options.Converters.Add(JsonFSharpConverter())
-                    
-                    DayRecords
-                        |> Array.map serializeRecord
-                        |> ignore
-            
+                    // insert batch of records into Postgres using binary copy
+                    match getConnectionString() with
+                    | Some connectionString ->
+                        use conn = new NpgsqlConnection(connectionString)
+                        let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
+                            conn.Open()
+                            use writer = conn.BeginBinaryImport("COPY events(event_time, cst_id, src_ip, src_port, dst_ip, dst_port, cc, vpn, proxy, tor, malware) FROM stdin WITH BINARY")
+                            for record in records do
+                                writer.StartRow()
+                                writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
+                                writer.Write(record.cst_id, NpgsqlTypes.NpgsqlDbType.Uuid)
+                                writer.Write(record.src_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                                writer.Write(record.src_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                                writer.Write(record.dst_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                                writer.Write(record.dst_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                                writer.Write(record.cc, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.vpn, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.proxy, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.tor, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.malware, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Complete() |> ignore
+                            conn.Close()
+                        // Perform binary COPY
+                        copyFromRecordsToPostgresBinary DayRecords
+                        | None -> 
+                            printfn "Failed to get connection string"
+                            // handle error
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
                     printMarkedUp $"{warn DayRecords.Length} events generated for {blue customer} on {info RewindDate} at {emphasize currentCycleTime}"
                 }
@@ -427,13 +380,20 @@ module TimeSeries =
             // get number of records per minute
             let transmit = true
 
-            let provider = RedisConnectionProvider(settings.environment)
-            let connection = provider.Connection
-
             let customer = settings.cst_id
             let recordsPerMinute : int = Convert.ToInt32(Math.Round(Decimal.Divide(settings.volume, 1440), 0))
             
-            // create number of records for that minute
+            let getConnectionString () =
+                let filePath = "settings.json"
+                let json = File.ReadAllText(filePath)
+                
+                try
+                    let settings = JsonConvert.DeserializeObject<Settings>(json)
+                    Some settings.connection
+                with
+                    | :? JsonException -> 
+                        printfn "Error parsing JSON"
+                        None
 
             let createMinuteForCompany =
                 async {
@@ -466,6 +426,7 @@ module TimeSeries =
                     // build an array of fake timestamps from the above arrays and sort chronologically (as array of string)
                     let randomTimeStamps =
                         [| for i in 0 .. (recordsPerMinute-1)->
+                            let dateString =
                                  RewindDate
                                  + " "
                                  + currentHour
@@ -474,23 +435,20 @@ module TimeSeries =
                                  + ":"
                                  + randomSeconds[i]
                                  + "."
-                                 + randomMillis[i] 
+                                 + randomMillis[i]
+                            DateTime.ParseExact(dateString, "yyyy-MM-dd HH:mm:ss.ff", null)
                         |]
                     
                     // Prevents the creating of an unnecessary array
                     randomTimeStamps
                     |> Array.sortInPlace
                     
-                    let epoch_timestamps : int64 array =
-                        [| for i in 0 .. (recordsPerMinute-1) -> 
-                            DateTimeOffset(DateTime.Parse(randomTimeStamps[i]).ToUniversalTime()).ToUnixTimeMilliseconds()
-                        |]
-    
+  
                     // TODO: This should be a lookup of some sort - by country
                     let srcIpFirstOctets = "160.72"
                     
                     let destIpFirstOctets = 
-                        match customer with
+                        match customer.ToString() with
                         | "61B2BF72EC2E450BA454D2E11591C0C6" -> "11.18"
                         | "dafe33545d454aef9f946ee47f32ca16" -> "12.19"
                         | _ -> "10.18"
@@ -525,6 +483,10 @@ module TimeSeries =
                                  + "."
                                  + randomSrcOctets4[i] 
                         |]
+                        
+                    let randomSrcIPv4Inet = 
+                        randomSrcIPv4
+                        |> Array.map convertToInet
     
                     let randomDestIPv4 =
                         [| for i in 0 .. (recordsPerMinute-1)->
@@ -534,21 +496,25 @@ module TimeSeries =
                                  + "."
                                  + randomDestOctets4[i]       
                         |]
+                        
+                    let randomDestIPv4Inet = 
+                        randomDestIPv4
+                        |> Array.map convertToInet
     
                     let randomSrcPort =
                         [| for i in 0 .. (recordsPerMinute-1)->
                                  let randomSrcPort = rnd.Next (1, 101)
                                  match randomSrcPort with
-                                 | i when i > 90 -> rnd.Next(1025, 65535).ToString()
-                                 | _ -> "80" 
+                                 | i when i > 90 -> rnd.Next(1025, 65535)
+                                 | _ -> 80
                         |]
     
                     let randomDestPort =
                         [| for i in 0 .. (recordsPerMinute-1)->
                                  let randomDestPort = rnd.Next (1, 101)
                                  match randomDestPort with
-                                 | i when i > 90 -> rnd.Next(1025, 65535).ToString()
-                                 | _ -> "80" 
+                                 | i when i > 90 -> rnd.Next(1025, 65535)
+                                 | _ -> 80
                         |]
                      
                     // generate array of countries - bias is built from Cloudflare DDoS source country top 10
@@ -645,12 +611,11 @@ module TimeSeries =
                     // create full JSON serializable array
                     let DayRecords =
                         [| for i in 0 .. (recordsPerMinute-1)->
-                             { epoch_timestamp = epoch_timestamps[i];
-                                 EventTime = randomTimeStamps[i];
+                             {   event_time = randomTimeStamps[i];
                                  cst_id = customer;
-                                 src_ip = randomSrcIPv4[i];
+                                 src_ip = randomSrcIPv4Inet[i];
                                  src_port = randomSrcPort[i];
-                                 dst_ip = randomDestIPv4[i];
+                                 dst_ip = randomDestIPv4Inet[i];
                                  dst_port = randomDestPort[i];
                                  cc = randomCC[i];
                                  vpn = VpnClients[i];
@@ -660,24 +625,33 @@ module TimeSeries =
                                  }
                         |]
                     
-                    let TTLValue = settings.ttl
-                    let serializeRecord (event: EventRecord) = 
-                        let newKey = "Customer:"+customer+":"+Guid.NewGuid().ToString("N")
-                        connection.Execute("JSON.SET", newKey, "$", JsonSerializer.Serialize(event)) |> ignore
-                        let dateTimeNowSeconds = DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()
-                        let eventExpirationInSeconds = DateTimeOffset(DateTime.Parse(event.EventTime).AddDays(TTLValue)).ToUnixTimeSeconds()
-                        let eventTtl = eventExpirationInSeconds - dateTimeNowSeconds
-                        connection.Execute("EXPIRE", newKey, eventTtl.ToString())     
-    
-                    // serialize JSON
-                    let options = JsonSerializerOptions()
-                    options.Converters.Add(JsonFSharpConverter())
-                    
-                    DayRecords
-                        |> Array.map serializeRecord
-                        // Task.Delay(sleep).ContinueWith(fun _ -> createMinuteForCompany)
-                        |> ignore
-            
+                    match getConnectionString() with
+                    | Some connectionString -> 
+                        use conn = new NpgsqlConnection(connectionString)
+                        let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
+                            conn.Open()
+                            use writer = conn.BeginBinaryImport("COPY events FROM stdin WITH BINARY")
+                            for record in records do
+                                writer.StartRow()
+                                writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
+                                writer.Write(record.cst_id, NpgsqlTypes.NpgsqlDbType.Uuid)
+                                writer.Write(record.src_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                                writer.Write(record.src_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                                writer.Write(record.dst_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                                writer.Write(record.dst_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                                writer.Write(record.cc, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.vpn, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.proxy, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.tor, NpgsqlTypes.NpgsqlDbType.Text)
+                                writer.Write(record.malware, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Complete() |> ignore
+                            conn.Close()
+                        // Perform binary COPY
+                        copyFromRecordsToPostgresBinary DayRecords
+                        | None -> 
+                            printfn "Failed to get connection string"
+                            // handle error
+                                        
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
                     printMarkedUp $"{warn DayRecords.Length} events generated for {blue customer} at {emphasize currentCycleTime}"
                 }           
