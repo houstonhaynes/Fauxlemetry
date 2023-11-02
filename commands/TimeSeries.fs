@@ -375,10 +375,8 @@ module TimeSeries =
         interface ICommandLimiter<EmitSettings>
         override _.Execute(_context, settings) =
             
-            // get number of records per minute
-            let transmit = true
-
             let customer = settings.cst_id
+            // calculate the number of records per minute by dividing the volume by 1440 (minutes in a day)
             let recordsPerMinute : int = Convert.ToInt32(Math.Round(Decimal.Divide(settings.volume, 1440), 0))
             
             let getConnectionString () =
@@ -621,70 +619,78 @@ module TimeSeries =
                 
             let copyBinaryEvents () =
                 async {
-                    while true do
-                        // Wait until the current second is greater than 55
-                        while DateTime.Now.Second > 58 do
-                            do! Async.Sleep(50) // Sleep for a short duration to check again
+                    let stopwatch = Stopwatch.StartNew()
 
-                        let! recordsForMinute = createMinuteForCompany ()
+                    // Determine the starting second, adjusting if we're at the end of a minute
+                    let mutable nextSecondToProcess = DateTime.Now.Second
+                    if nextSecondToProcess > 58 then
+                        // If we're late in the minute, wait for the next minute to start
+                        do! Async.Sleep((60 - nextSecondToProcess) * 1000 + 1000)
 
-                        let groupEventsBySecond records =
-                            records
-                            |> Array.groupBy (fun record -> record.event_time.Second)
-                            |> Map.ofArray
+                    // Generate events for a minute
+                    let! recordsForMinute = createMinuteForCompany ()
+
+                    // Group events by second
+                    let mutable eventsBySecond = 
+                        recordsForMinute
+                        |> Array.groupBy (fun record -> record.event_time.Second)
+                        |> Map.ofArray
                         
-                        let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
-                            use conn = new NpgsqlConnection(getConnectionString())
-                            conn.Open()
-                            use writer = conn.BeginBinaryImport("COPY events(event_time,
-                                                                cst_id, src_ip, src_port,
-                                                                dst_ip, dst_port, cc, vpn,
-                                                                proxy, tor, malware) FROM stdin WITH BINARY")
-                            for record in records do
-                                writer.StartRow()
-                                writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
-                                writer.Write(record.cst_id, NpgsqlTypes.NpgsqlDbType.Uuid)
-                                writer.Write(record.src_ip, NpgsqlTypes.NpgsqlDbType.Inet)
-                                writer.Write(record.src_port, NpgsqlTypes.NpgsqlDbType.Integer)
-                                writer.Write(record.dst_ip, NpgsqlTypes.NpgsqlDbType.Inet)
-                                writer.Write(record.dst_port, NpgsqlTypes.NpgsqlDbType.Integer)
-                                writer.Write(record.cc, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.vpn, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.proxy, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.tor, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.malware, NpgsqlTypes.NpgsqlDbType.Text)
-                            writer.Complete() |> ignore
-                            conn.Close()
+                    // Reset stopwatch at the beginning of the minute
+                    stopwatch.Restart()
 
-                        // Function to get the current second
-                        let getCurrentSecond () = DateTime.Now.Second
+                    // Copy records to Postgres using binary copy
+                    let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
+                        use conn = new NpgsqlConnection(getConnectionString())
+                        conn.Open()
+                        use writer = conn.BeginBinaryImport("COPY events(event_time, cst_id, src_ip, src_port, dst_ip, dst_port, cc, vpn, proxy, tor, malware) FROM stdin WITH BINARY")
+                        for record in records do
+                            writer.StartRow()
+                            writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
+                            writer.Write(record.cst_id, NpgsqlTypes.NpgsqlDbType.Uuid)
+                            writer.Write(record.src_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                            writer.Write(record.src_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                            writer.Write(record.dst_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                            writer.Write(record.dst_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                            writer.Write(record.cc, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.vpn, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.proxy, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.tor, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.malware, NpgsqlTypes.NpgsqlDbType.Text)
+                        writer.Complete() |> ignore
+                        conn.Close()
 
-                        // Function to process events for a minute
-                        let processEventsForMinute startingSecond (eventsBySecond: Map<int, EventRecord[]>) =
-                            let stopwatch = Stopwatch.StartNew()
-                            
-                            // Process events starting from the current second to the end of the minute
-                            for second in startingSecond..59 do
-                                match eventsBySecond.TryFind(second) with
-                                | Some events ->
-                                    copyFromRecordsToPostgresBinary events
-                                    let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
-                                    let eventCount = events.Length
-                                    printMarkedUp $"{warn eventCount} events generated for {blue customer} at {emphasize currentCycleTime}"
+                    // Process events for each second
+                    let processEventsForSecond second =
+                        match eventsBySecond.TryFind(second) with
+                        | Some events ->
+                            async {
+                                do! Async.SwitchToThreadPool() // Switch to I/O-friendly context
+                                copyFromRecordsToPostgresBinary events
+                                let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
+                                let eventCount = events.Length
+                                printMarkedUp $"{warn eventCount} events generated for {blue customer} at {emphasize currentCycleTime}"
+                            } |> Async.Start
+                        | None ->
+                            async {
+                                let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
+                                printMarkedUp $"{warn 0} events generated for {blue customer} at {emphasize currentCycleTime}"
+                            } |> Async.Start
 
-                                | None -> ()
 
-                                while stopwatch.ElapsedMilliseconds < 1000L do
-                                    Async.Sleep(1) |> Async.RunSynchronously
+                    // Loop until the end of the minute
+                    while nextSecondToProcess < 60 do
+                        processEventsForSecond nextSecondToProcess
+                        // Increment next second
+                        nextSecondToProcess <- nextSecondToProcess + 1
 
-                                stopwatch.Restart()
-
-                        let startingSecond = getCurrentSecond()
-                        let eventsBySecond = groupEventsBySecond recordsForMinute
-
-                        // Process events for the first partial minute
-                        do processEventsForMinute startingSecond eventsBySecond
-
+                        let elapsed = stopwatch.ElapsedMilliseconds
+                        // Calculate remaining time until the next second
+                        let remainingTime = 1000L - (elapsed % 1000L)
+                        // Sleep until the next second starts
+                        do! Async.Sleep(int remainingTime)
+                        // Synchronize stopwatch with the system clock
+                        stopwatch.Restart()
                 }
             
             task {
@@ -694,3 +700,4 @@ module TimeSeries =
             |> Task.WaitAll
                            
             0
+                        
