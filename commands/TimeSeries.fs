@@ -37,12 +37,6 @@ module TimeSeries =
         
         [<CommandOption("-c|--cust")>]
         member val cst_id = Guid.ParseExact(Guid.NewGuid().ToString("N"), "N") with get, set
-        
-        [<CommandOption("-e|--env")>]
-        member val environment = "redis://localhost:5432" with get, set
-
-        [<CommandOption("-t|--ttldays")>]
-        member val ttl: int = 31 with get, set
 
     type EventRecord =
         { event_time: DateTime
@@ -331,7 +325,10 @@ module TimeSeries =
                         use conn = new NpgsqlConnection(connectionString)
                         let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
                             conn.Open()
-                            use writer = conn.BeginBinaryImport("COPY events(event_time, cst_id, src_ip, src_port, dst_ip, dst_port, cc, vpn, proxy, tor, malware) FROM stdin WITH BINARY")
+                            use writer = conn.BeginBinaryImport("COPY events(event_time,
+                                                                cst_id, src_ip, src_port,
+                                                                dst_ip, dst_port, cc, vpn,
+                                                                proxy, tor, malware) FROM stdin WITH BINARY")
                             for record in records do
                                 writer.StartRow()
                                 writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
@@ -424,9 +421,8 @@ module TimeSeries =
                     let RewindDate =
                         DateTime.Now.ToString("yyyy-MM-dd")
                     // build an array of fake timestamps from the above arrays and sort chronologically (as array of string)
-                    let randomTimeStamps =
+                    let randomTimeStrings =
                         [| for i in 0 .. (recordsPerMinute-1)->
-                            let dateString =
                                  RewindDate
                                  + " "
                                  + currentHour
@@ -436,12 +432,12 @@ module TimeSeries =
                                  + randomSeconds[i]
                                  + "."
                                  + randomMillis[i]
-                            DateTime.ParseExact(dateString, "yyyy-MM-dd HH:mm:ss.ff", null)
                         |]
                     
                     // Prevents the creating of an unnecessary array
-                    randomTimeStamps
-                    |> Array.sortInPlace
+                    let randomTimeStamps = 
+                        randomTimeStrings
+                        |> Array.map (fun ts -> DateTime.Parse(ts).ToUniversalTime())
                     
   
                     // TODO: This should be a lookup of some sort - by country
@@ -456,22 +452,22 @@ module TimeSeries =
                     // build an array of randomized octets (3, 4) for the Source and Destination IPv4
                     let randomSrcOctets3 =
                         [| for i in 0 .. (recordsPerMinute-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
                         
                     let randomSrcOctets4 =
                         [| for i in 0 .. (recordsPerMinute-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
     
                     let randomDestOctets3 =
                         [| for i in 0 .. (recordsPerMinute-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
     
                     let randomDestOctets4 =
                         [| for i in 0 .. (recordsPerMinute-1)->
-                                 rnd.Next(256).ToString().PadLeft(3, '0') 
+                                 rnd.Next(256).ToString()
                         |]
                 
                     // build an array of fake IPv4s from constants and arrays above
@@ -630,7 +626,10 @@ module TimeSeries =
                         use conn = new NpgsqlConnection(connectionString)
                         let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
                             conn.Open()
-                            use writer = conn.BeginBinaryImport("COPY events FROM stdin WITH BINARY")
+                            use writer = conn.BeginBinaryImport("COPY events(event_time,
+                                                                cst_id, src_ip, src_port,
+                                                                dst_ip, dst_port, cc, vpn,
+                                                                proxy, tor, malware) FROM stdin WITH BINARY")
                             for record in records do
                                 writer.StartRow()
                                 writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
