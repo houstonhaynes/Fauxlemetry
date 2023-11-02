@@ -8,6 +8,7 @@ open Microsoft.FSharp.Control
 
 module TimeSeries =
     open System.Threading.Tasks
+    open System.Diagnostics
     open Microsoft.FSharp.Collections
     open Spectre.Console.Cli
     open Newtonsoft.Json
@@ -383,16 +384,11 @@ module TimeSeries =
             let getConnectionString () =
                 let filePath = "settings.json"
                 let json = File.ReadAllText(filePath)
-                
-                try
-                    let settings = JsonConvert.DeserializeObject<Settings>(json)
-                    Some settings.connection
-                with
-                    | :? JsonException -> 
-                        printfn "Error parsing JSON"
-                        None
+                let settings = JsonConvert.DeserializeObject<Settings>(json)
+                settings.connection
 
-            let createMinuteForCompany =
+
+            let createMinuteForCompany () =
                 async {
                     // set up random functions
                     let rnd = Random()
@@ -605,7 +601,7 @@ module TimeSeries =
                         |]
             
                     // create full JSON serializable array
-                    let DayRecords =
+                    let recordsForMinute =
                         [| for i in 0 .. (recordsPerMinute-1)->
                              {   event_time = randomTimeStamps[i];
                                  cst_id = customer;
@@ -620,11 +616,25 @@ module TimeSeries =
                                  malware = MalBoolean[i]
                                  }
                         |]
-                    
-                    match getConnectionString() with
-                    | Some connectionString -> 
-                        use conn = new NpgsqlConnection(connectionString)
+                    return recordsForMinute
+                }
+                
+            let copyBinaryEvents () =
+                async {
+                    while true do
+                        // Wait until the current second is greater than 55
+                        while DateTime.Now.Second > 58 do
+                            do! Async.Sleep(50) // Sleep for a short duration to check again
+
+                        let! recordsForMinute = createMinuteForCompany ()
+
+                        let groupEventsBySecond records =
+                            records
+                            |> Array.groupBy (fun record -> record.event_time.Second)
+                            |> Map.ofArray
+                        
                         let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
+                            use conn = new NpgsqlConnection(getConnectionString())
                             conn.Open()
                             use writer = conn.BeginBinaryImport("COPY events(event_time,
                                                                 cst_id, src_ip, src_port,
@@ -645,25 +655,41 @@ module TimeSeries =
                                 writer.Write(record.malware, NpgsqlTypes.NpgsqlDbType.Text)
                             writer.Complete() |> ignore
                             conn.Close()
-                        // Perform binary COPY
-                        copyFromRecordsToPostgresBinary DayRecords
-                        | None -> 
-                            printfn "Failed to get connection string"
-                            // handle error
-                                        
-                    let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
-                    printMarkedUp $"{warn DayRecords.Length} events generated for {blue customer} at {emphasize currentCycleTime}"
-                }           
-            
-            let sleep = 60000
-            let command = "drip"
-            let time = sleep / 1000
-            printMarkedUp $"The {blue command} will emit events every {warn time} seconds"        
+
+                        // Function to get the current second
+                        let getCurrentSecond () = DateTime.Now.Second
+
+                        // Function to process events for a minute
+                        let processEventsForMinute startingSecond (eventsBySecond: Map<int, EventRecord[]>) =
+                            let stopwatch = Stopwatch.StartNew()
+                            
+                            // Process events starting from the current second to the end of the minute
+                            for second in startingSecond..59 do
+                                match eventsBySecond.TryFind(second) with
+                                | Some events ->
+                                    copyFromRecordsToPostgresBinary events
+                                    let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
+                                    let eventCount = events.Length
+                                    printMarkedUp $"{warn eventCount} events generated for {blue customer} at {emphasize currentCycleTime}"
+
+                                | None -> ()
+
+                                while stopwatch.ElapsedMilliseconds < 1000L do
+                                    Async.Sleep(1) |> Async.RunSynchronously
+
+                                stopwatch.Restart()
+
+                        let startingSecond = getCurrentSecond()
+                        let eventsBySecond = groupEventsBySecond recordsForMinute
+
+                        // Process events for the first partial minute
+                        do processEventsForMinute startingSecond eventsBySecond
+
+                }
             
             task {
                 while true do   
-                    do! Task.Delay(sleep)
-                    do! createMinuteForCompany
+                    do! copyBinaryEvents ()
             }
             |> Task.WaitAll
                            
