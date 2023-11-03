@@ -66,15 +66,9 @@ module TimeSeries =
 
             let getConnectionString () =
                 let json = File.ReadAllText("settings.json")
+                let settings = JsonConvert.DeserializeObject<Settings>(json)
+                settings.connection
                 
-                try
-                    let settings = JsonConvert.DeserializeObject<Settings>(json)
-                    Some settings.connection
-                with
-                    | :? JsonException -> 
-                        printfn "Error parsing JSON"
-                        None
-                        
             let createDayForCompany (currentDayOffset : int) =
                 async {
                     // set up random functions
@@ -318,38 +312,32 @@ module TimeSeries =
                         let eventTimeInMs = DateTimeOffset(record.event_time).ToUnixTimeMilliseconds()
                         let currentTimeInMs = DateTimeOffset(DateTime.Now.ToUniversalTime()).ToUnixTimeMilliseconds()
                         eventTimeInMs < currentTimeInMs)
-                        
 
-                    // insert batch of records into Postgres using binary copy
-                    match getConnectionString() with
-                    | Some connectionString ->
-                        use conn = new NpgsqlConnection(connectionString)
-                        let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
-                            conn.Open()
-                            use writer = conn.BeginBinaryImport("COPY events(event_time,
-                                                                cst_id, src_ip, src_port,
-                                                                dst_ip, dst_port, cc, vpn,
-                                                                proxy, tor, malware) FROM stdin WITH BINARY")
-                            for record in records do
-                                writer.StartRow()
-                                writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
-                                writer.Write(record.cst_id, NpgsqlTypes.NpgsqlDbType.Uuid)
-                                writer.Write(record.src_ip, NpgsqlTypes.NpgsqlDbType.Inet)
-                                writer.Write(record.src_port, NpgsqlTypes.NpgsqlDbType.Integer)
-                                writer.Write(record.dst_ip, NpgsqlTypes.NpgsqlDbType.Inet)
-                                writer.Write(record.dst_port, NpgsqlTypes.NpgsqlDbType.Integer)
-                                writer.Write(record.cc, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.vpn, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.proxy, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.tor, NpgsqlTypes.NpgsqlDbType.Text)
-                                writer.Write(record.malware, NpgsqlTypes.NpgsqlDbType.Text)
-                            writer.Complete() |> ignore
-                            conn.Close()
-                        // Perform binary COPY
-                        copyFromRecordsToPostgresBinary DayRecords
-                        | None -> 
-                            printfn "Failed to get connection string"
-                            // handle error
+                    use conn = new NpgsqlConnection(getConnectionString())
+                    conn.Open()
+                    let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
+                        use writer = conn.BeginBinaryImport("COPY events(event_time,
+                                                            cst_id, src_ip, src_port,
+                                                            dst_ip, dst_port, cc, vpn,
+                                                            proxy, tor, malware) FROM stdin WITH BINARY")
+                        for record in records do
+                            writer.StartRow()
+                            writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
+                            writer.Write(record.cst_id, NpgsqlTypes.NpgsqlDbType.Uuid)
+                            writer.Write(record.src_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                            writer.Write(record.src_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                            writer.Write(record.dst_ip, NpgsqlTypes.NpgsqlDbType.Inet)
+                            writer.Write(record.dst_port, NpgsqlTypes.NpgsqlDbType.Integer)
+                            writer.Write(record.cc, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.vpn, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.proxy, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.tor, NpgsqlTypes.NpgsqlDbType.Text)
+                            writer.Write(record.malware, NpgsqlTypes.NpgsqlDbType.Text)
+                        writer.Complete() |> ignore
+                        
+                    // Perform binary COPY
+                    copyFromRecordsToPostgresBinary DayRecords
+                    conn.Close()
                     let currentCycleTime = DateTime.Now.ToString("hh:mm:ss.fff")
                     printMarkedUp $"{warn DayRecords.Length} events generated for {blue customer} on {info RewindDate} at {emphasize currentCycleTime}"
                 }
