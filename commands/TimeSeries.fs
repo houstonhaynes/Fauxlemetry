@@ -631,7 +631,7 @@ module TimeSeries =
                     let copyFromRecordsToPostgresBinary (records: EventRecord[]) =
                         use conn = new NpgsqlConnection(getConnectionString())
                         conn.Open()
-                        use writer = conn.BeginBinaryImport("COPY events(event_time, cst_id, src_ip, src_port, dst_ip, dst_port, cc, vpn, proxy, tor, malware) FROM stdin WITH BINARY")
+                        use writer = conn.BeginBinaryImport("COPY events_hourly(event_time, cst_id, src_ip, src_port, dst_ip, dst_port, cc, vpn, proxy, tor, malware) FROM stdin WITH BINARY")
                         for record in records do
                             writer.StartRow()
                             writer.Write(record.event_time, NpgsqlTypes.NpgsqlDbType.TimestampTz)
